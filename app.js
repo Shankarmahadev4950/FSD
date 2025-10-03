@@ -289,7 +289,8 @@ let authToken = null;
 let resetEmail = '';
 
 // API Base URL
-const API_BASE = 'http://localhost:5000/api';
+//const API_BASE = 'http://localhost:5000/api';
+const API_BASE = 'https://locallink.onrender.com/api';
 //const API_BASE = 'http://YOUR-EC2-IP:5000/api';
 
 // ✅ TOKEN MANAGEMENT - Persistent Sessions
