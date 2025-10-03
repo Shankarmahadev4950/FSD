@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocalLink - Connect, Share, Grow Together</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+    <style>
+        /* Enhanced Get Started Modal Styles */
+        .option-card {
+            transition: all var(--duration-normal) var(--ease-in-out);
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+
+        .option-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .option-card.selected {
+            border-color: var(--color-primary) !important;
+            background: var(--color-secondary);
+        }
+
+        .category-section {
+            border-left: 3px solid var(--color-primary);
+            padding-left: var(--space-4);
+            margin-bottom: var(--space-5);
+        }
+
+        .category-header {
+            background: var(--gradient-surface);
+            border-left: 4px solid var(--color-primary);
+        }
+
+        .skill-checkbox:checked + .skill-label {
+            font-weight: var(--font-weight-semibold);
+            color: var(--color-primary);
+        }
+
+        .selected-skills-summary {
+            background: var(--color-secondary);
+            border-radius: var(--radius-lg);
+            padding: var(--space-4);
+        }
+
+        .form-check-input:checked {
+            background-color: var(--color-primary);
+            border-color: var(--color-primary);
+        }
+
+        /* Ensure modal content is visible */
+        .skill-selection-section {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .skills-container {
+            padding: var(--space-3);
+        }
+
+        .hero-section {
+            background: var(--gradient-hero);
+        }
+
+        .bg-gradient-primary {
+            background: var(--gradient-primary) !important;
+        }
+
+        .stats-card {
+            text-align: center;
+            padding: var(--space-5);
+            border-radius: var(--radius-lg);
+            background: var(--color-surface);
+            box-shadow: var(--shadow-sm);
+            transition: all var(--duration-normal) var(--ease-in-out);
+        }
+
+        .stats-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .stats-card .icon {
+            font-size: 2rem;
+            margin-bottom: var(--space-3);
+        }
+
+        .stats-card .number {
+            font-size: 2.5rem;
+            font-weight: var(--font-weight-bold);
+            margin-bottom: var(--space-2);
+            color: var(--color-text);
+        }
+
+        .stats-card .label {
+            color: var(--color-text-secondary);
+            font-size: var(--font-size-sm);
+        }
+
+        .feature-icon {
+            width: 80px;
+            height: 80px;
+            transition: transform var(--duration-normal) var(--ease-in-out);
+        }
+
+        .feature-icon:hover {
+            transform: scale(1.1);
+        }
+
+        .profile-avatar-placeholder {
+            width: 100px;
+            height: 100px;
+            background: var(--color-secondary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 2rem;
+            color: var(--color-text-secondary);
+            border: 3px solid var(--color-primary);
+        }
+
+        .min-vh-50 {
+            min-height: 50vh;
+        }
+
+        /* Enhanced rating stars */
+        .rating-stars .form-check-input:checked {
+            background-color: var(--color-warning);
+            border-color: var(--color-warning);
+        }
+
+        /* Landing Page Enhanced Styles */
+        .hero-section {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            min-height: 80vh;
+            display: flex;
+            align-items: center;
+        }
+
+        .step-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .feature-card, .skill-category {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .feature-card:hover, .skill-category:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .btn {
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .cta-section {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        }
+
+        .skill-category {
+            cursor: pointer;
+        }
+
+        .skill-category:hover {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+        
+    </style>
+</head>
+<body>
+<!-- Enhanced Navigation -->
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="#" id="logo">
+            <i class="fas fa-link text-primary me-2"></i>LocalLink
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item" id="nav-home-item">
+                    <a class="nav-link active nav-button-outline" href="#" id="nav-home">
+                        <i class="fas fa-home nav-icon"></i>Home
+                    </a>
+                </li>
+                <li class="nav-item d-none" id="nav-dashboard-item">
+                    <a class="nav-link nav-button-outline" href="#" id="nav-dashboard">
+                        <i class="fas fa-tachometer-alt nav-icon"></i>Dashboard
+                        <span class="nav-badge" id="dashboard-badge">3</span>
+                    </a>
+                </li>
+                <li class="nav-item d-none" id="nav-skills-item">
+                    <a class="nav-link nav-button-outline" href="#" id="nav-skills">
+                        <i class="fas fa-graduation-cap nav-icon"></i>Skills
+                        <span class="nav-badge" id="skills-badge">6</span>
+                    </a>
+                </li>
+                <li class="nav-item d-none" id="nav-profile-item">
+                    <a class="nav-link nav-button-outline" href="#" id="nav-profile">
+                        <i class="fas fa-user nav-icon"></i>Profile
+                    </a>
+                </li>
+            </ul>
+
+            <!-- Guest Navigation (shown when logged out) -->
+            <div class="d-flex align-items-center" id="guest-nav">
+                <button class="btn btn-outline-primary me-2" id="btn-signin">Sign In</button>
+                <button class="btn btn-primary" id="btn-signup">Sign Up</button>
+            </div>
+
+            <!-- User Navigation (shown when logged in) -->
+            <div class="d-flex align-items-center d-none" id="user-nav">
+                <div class="dropdown">
+                    <button class="btn btn-outline-primary dropdown-toggle d-flex align-items-center" type="button" 
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                        <div class="avatar avatar-sm me-2" id="user-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <span id="user-display-name">User</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="#" id="menu-profile"><i class="fas fa-user me-2"></i>Profile</a></li>
+                        <li><a class="dropdown-item" href="#" id="menu-dashboard"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</a></li>
+                        <li><a class="dropdown-item" href="#" id="menu-activity"><i class="fas fa-chart-line me-2"></i>Activity</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="#" id="btn-logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+
+    <!-- Landing Page -->
+    <div id="landing-page">
+        <!-- Hero Section -->
+        <section class="hero-section text-white py-5 scroll-reveal">
+            <div class="container">
+                <div class="row min-vh-50 align-items-center">
+                    <div class="col-lg-6">
+                        <h1 class="display-4 fw-bold mb-3">LocalLink</h1>
+                        <p class="lead mb-4">
+                            LocalLink connects neighbors through skill exchange using time-based tokens. 
+                            Trade your expertise for services you need - no money required!
+                        </p>
+                        <div class="d-flex gap-3 flex-wrap">
+                            <button class="btn btn-light btn-lg px-4" id="hero-get-started">
+                                <i class="fas fa-rocket me-2"></i>Get Started
+                            </button>
+                            <button class="btn btn-outline-light btn-lg px-4" id="hero-learn">
+                                <i class="fas fa-info-circle me-2"></i>Learn More
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="text-center">
+                            <i class="fas fa-people-arrows fa-10x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- How It Works Section -->
+        <section id="how-it-works" class="how-it-works py-5 bg-light">
+            <div class="container">
+                <div class="text-center mb-5">
+                    <h2 class="display-5 fw-bold mb-3">How LocalLink Works</h2>
+                    <p class="lead text-muted">Simple, fair, and community-focused skill exchange</p>
+                </div>
+                
+                <div class="row g-4">
+                    <!-- Step 1 -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card h-100 border-0 shadow-sm text-center">
+                            <div class="card-body p-4">
+                                <div class="step-number bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                                     style="width: 60px; height: 60px; font-size: 1.5rem; font-weight: bold;">
+                                    1
+                                </div>
+                                <h5 class="card-title">Create Your Profile</h5>
+                                <p class="card-text text-muted">
+                                    Sign up and list the skills you can teach and the skills you want to learn.
+                                </p>
+                                <div class="mt-3">
+                                    <i class="fas fa-user-plus fa-2x text-primary"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Step 2 -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card h-100 border-0 shadow-sm text-center">
+                            <div class="card-body p-4">
+                                <div class="step-number bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                                     style="width: 60px; height: 60px; font-size: 1.5rem; font-weight: bold;">
+                                    2
+                                </div>
+                                <h5 class="card-title">Earn Time Tokens</h5>
+                                <p class="card-text text-muted">
+                                    Teach others and earn time tokens for every hour you spend sharing your skills.
+                                </p>
+                                <div class="mt-3">
+                                    <i class="fas fa-coins fa-2x text-warning"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Step 3 -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card h-100 border-0 shadow-sm text-center">
+                            <div class="card-body p-4">
+                                <div class="step-number bg-info text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                                     style="width: 60px; height: 60px; font-size: 1.5rem; font-weight: bold;">
+                                    3
+                                </div>
+                                <h5 class="card-title">Find Local Experts</h5>
+                                <p class="card-text text-muted">
+                                    Browse skills in your area and connect with neighbors who can teach you.
+                                </p>
+                                <div class="mt-3">
+                                    <i class="fas fa-search fa-2x text-info"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Step 4 -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card h-100 border-0 shadow-sm text-center">
+                            <div class="card-body p-4">
+                                <div class="step-number bg-warning text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                                     style="width: 60px; height: 60px; font-size: 1.5rem; font-weight: bold;">
+                                    4
+                                </div>
+                                <h5 class="card-title">Exchange & Grow</h5>
+                                <p class="card-text text-muted">
+                                    Use your tokens to learn new skills and build a stronger community.
+                                </p>
+                                <div class="mt-3">
+                                    <i class="fas fa-handshake fa-2x text-success"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section class="features-section py-5">
+            <div class="container">
+                <div class="text-center mb-5">
+                    <h2 class="display-5 fw-bold mb-3">Why Choose LocalLink?</h2>
+                    <p class="lead text-muted">Build skills and connections in your community</p>
+                </div>
+                
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="feature-card text-center p-4">
+                            <div class="feature-icon bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                                 style="width: 80px; height: 80px;">
+                                <i class="fas fa-dollar-sign fa-2x text-primary"></i>
+                            </div>
+                            <h5>No Money Required</h5>
+                            <p class="text-muted">
+                                Exchange skills using time-based tokens instead of cash. Learn and teach without financial barriers.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="feature-card text-center p-4">
+                            <div class="feature-icon bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                                 style="width: 80px; height: 80px;">
+                                <i class="fas fa-users fa-2x text-success"></i>
+                            </div>
+                            <h5>Local Community</h5>
+                            <p class="text-muted">
+                                Connect with neighbors in your area. Build meaningful relationships while learning new skills.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="feature-card text-center p-4">
+                            <div class="feature-icon bg-info bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                                 style="width: 80px; height: 80px;">
+                                <i class="fas fa-graduation-cap fa-2x text-info"></i>
+                            </div>
+                            <h5>Learn Anything</h5>
+                            <p class="text-muted">
+                                From cooking to coding, yoga to home repair. Discover endless learning opportunities in your community.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Popular Skills Section -->
+        <section class="popular-skills py-5 bg-light">
+            <div class="container">
+                <div class="text-center mb-5">
+                    <h2 class="display-5 fw-bold mb-3">Popular Skills on LocalLink</h2>
+                    <p class="lead text-muted">Discover what your neighbors are teaching and learning</p>
+                </div>
+                
+                <div class="row g-3">
+                    <div class="col-6 col-md-4 col-lg-2">
+                        <div class="skill-category text-center p-3 bg-white rounded shadow-sm">
+                            <i class="fas fa-paint-brush fa-2x text-primary mb-2"></i>
+                            <h6 class="mb-0">Graphic Design</h6>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4 col-lg-2">
+                        <div class="skill-category text-center p-3 bg-white rounded shadow-sm">
+                            <i class="fas fa-code fa-2x text-success mb-2"></i>
+                            <h6 class="mb-0">Web Development</h6>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4 col-lg-2">
+                        <div class="skill-category text-center p-3 bg-white rounded shadow-sm">
+                            <i class="fas fa-guitar fa-2x text-warning mb-2"></i>
+                            <h6 class="mb-0">Music Lessons</h6>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4 col-lg-2">
+                        <div class="skill-category text-center p-3 bg-white rounded shadow-sm">
+                            <i class="fas fa-utensils fa-2x text-danger mb-2"></i>
+                            <h6 class="mb-0">Cooking</h6>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4 col-lg-2">
+                        <div class="skill-category text-center p-3 bg-white rounded shadow-sm">
+                            <i class="fas fa-language fa-2x text-info mb-2"></i>
+                            <h6 class="mb-0">Languages</h6>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4 col-lg-2">
+                        <div class="skill-category text-center p-3 bg-white rounded shadow-sm">
+                            <i class="fas fa-seedling fa-2x text-success mb-2"></i>
+                            <h6 class="mb-0">Gardening</h6>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-5">
+                    <button class="btn btn-primary btn-lg" onclick="showSection('skills')">
+                        <i class="fas fa-search me-2"></i>Browse All Skills
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Testimonials Section -->
+        <section class="testimonials py-5">
+            <div class="container">
+                <div class="text-center mb-5">
+                    <h2 class="display-5 fw-bold mb-3">What Our Community Says</h2>
+                    <p class="lead text-muted">Real stories from LocalLink users</p>
+                </div>
+                
+                <div class="row" id="testimonials-container">
+                    <!-- Testimonials will be populated by JavaScript -->
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA Section -->
+        <section class="cta-section bg-primary text-white py-5">
+            <div class="container">
+                <div class="row align-items-center">
+                    <div class="col-lg-8">
+                        <h3 class="display-6 fw-bold mb-3">Ready to Start Your Skill Exchange Journey?</h3>
+                        <p class="lead mb-0">
+                            Join thousands of neighbors already trading skills and building community.
+                        </p>
+                    </div>
+                    <div class="col-lg-4 text-lg-end">
+                        <button id="cta-get-started" class="btn btn-light btn-lg px-5">
+                            <i class="fas fa-user-plus me-2"></i>Join Now
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Activity Content -->
+    <div id="activity-content" class="d-none">
+        <div class="container mt-5 pt-4">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <button class="btn btn-outline-primary btn-sm" onclick="toggleActivityView()">
+                        <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
+                    </button>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-lg-8 mb-4">
+                    <div id="daily-activity-chart"></div>
+                </div>
+                <div class="col-lg-4 mb-4">
+                    <div id="weekly-stats"></div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-lg-6 mb-4">
+                    <div id="skill-history"></div>
+                </div>
+                <div class="col-lg-6 mb-4">
+                    <div id="courses-completed"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Authentication Section -->
+<div id="auth-section" class="d-none">
+    <div class="container-fluid min-vh-100 d-flex align-items-center justify-content-center bg-light">
+        <div class="row w-100 justify-content-center">
+            <div class="col-md-5">
+                <div class="card auth-form border-0 card--interactive" style="background: white !important; border: 2px solid #e9ecef !important; border-radius: 16px !important; box-shadow: 0 8px 32px rgba(54, 171, 255, 0.1) !important;">
+                    <div class="card-body p-5">
+                        <!-- Sign In Form -->
+                        <div id="signin-form-container">
+                            <div class="text-center mb-4">
+                                <h3 class="form-heading" style="color: #2c3e50 !important; font-weight: 700 !important; font-size: 2rem !important; margin-bottom: 8px !important;">Welcome Back</h3>
+                                <p class="text-muted" style="color: #6c757d !important; font-size: 1.1rem !important;">Sign in to your LocalLink account</p>
+                            </div>
+
+                            <form id="signin-form" class="auth-form">
+                                <div class="mb-4">
+                                    <label for="signin-email" class="form-label" style="color: #cfd2d5 !important; font-weight: 600 !important; font-size: 1rem !important;">Email Address</label>
+                                    <input type="email" class="form-control" id="signin-email" required style="background: white !important; color: #000102 !important; border: 2px solid #e9ecef !important; border-radius: 10px !important; padding: 14px !important; font-size: 1rem !important;">
+                                </div>
+                                <div class="mb-4">
+                                    <label for="signin-password" class="form-label" style="color: #f0f1f2 !important; font-weight: 600 !important; font-size: 1rem !important;">Password</label>
+                                    <input type="password" class="form-control" id="signin-password" required style="background: white !important; color: #000000 !important; border: 2px solid #e9ecef !important; border-radius: 10px !important; padding: 14px !important; font-size: 1rem !important;">
+                                    <div class="form-text text-end mt-2">
+                                        <a href="#" id="forgot-password-link" style="color: #3498db !important; text-decoration: none !important; font-weight: 500 !important;">Forgot password?</a>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn w-100 mb-3" style="background: linear-gradient(135deg, #467eb7 0%, #7696b6 100%) !important; color: rgb(244, 244, 244) !important; border: none !important; border-radius: 10px !important; padding: 14px !important; font-weight: 600 !important; font-size: 1.1rem !important; box-shadow: 0 4px 15px rgba(44, 62, 80, 0.3) !important; transition: all 0.3s ease !important;">
+                                    Sign In
+                                </button>
+                                <button type="button" class="btn w-100 mb-3" id="guest-signin" style="background: linear-gradient(135deg, #467eb7 0%, #7696b6 100%) !important; color: #f2f8fd !important; border: 2px solid #bdc3c7 !important; border-radius: 10px !important; padding: 14px !important; font-weight: 600 !important; font-size: 1rem !important; transition: all 0.3s ease !important;">
+                                    Continue as Guest
+                                </button>
+                            </form>
+
+                            <div class="text-center">
+                                <p class="mb-0" style="color: #6c757d !important;">Don't have an account? 
+                                    <a href="#" id="auth-switch-link" data-target="signup" style="color: #3498db !important; text-decoration: none !important; font-weight: 600 !important;">Sign up here</a>
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Sign Up Form -->
+                        <div id="signup-form-container" class="d-none">
+                            <div class="text-center mb-4">
+                                <h3 class="form-heading" style="color: #2c3e50 !important; font-weight: 700 !important; font-size: 2rem !important; margin-bottom: 8px !important;">Join LocalLink</h3>
+                                <p class="text-muted" style="color: #6c757d !important; font-size: 1.1rem !important;">Create your account to start exchanging skills</p>
+                            </div>
+
+                            <form id="signup-form" class="auth-form">
+                                <div class="mb-3">
+                                    <label for="signup-firstname" class="form-label" style="color: #ffffff !important; font-weight: 600 !important;">First Name</label>
+                                    <input type="text" class="form-control" id="signup-firstname" required style="background: white !important; color: #2c3e50 !important; border: 2px solid #e9ecef !important; border-radius: 10px !important; padding: 14px !important;">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="signup-lastname" class="form-label" style="color: #ffffff !important; font-weight: 600 !important;">Last Name</label>
+                                    <input type="text" class="form-control" id="signup-lastname" required style="background: white !important; color: #2c3e50 !important; border: 2px solid #e9ecef !important; border-radius: 10px !important; padding: 14px !important;">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="signup-email" class="form-label" style="color: #ffffff !important; font-weight: 600 !important;">Email Address</label>
+                                    <input type="email" class="form-control" id="signup-email" required style="background: white !important; color: #2c3e50 !important; border: 2px solid #e9ecef !important; border-radius: 10px !important; padding: 14px !important;">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="signup-password" class="form-label" style="color: #ffffff !important; font-weight: 600 !important;">Password</label>
+                                    <input type="password" class="form-control" id="signup-password" required style="background: white !important; color: #2c3e50 !important; border: 2px solid #e9ecef !important; border-radius: 10px !important; padding: 14px !important;">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="signup-confirm-password" class="form-label" style="color: #ffffff !important; font-weight: 600 !important;">Confirm Password</label>
+                                    <input type="password" class="form-control" id="signup-confirm-password" required style="background: white !important; color: #2c3e50 !important; border: 2px solid #e9ecef !important; border-radius: 10px !important; padding: 14px !important;">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="signup-location" class="form-label" style="color: #ffffff !important; font-weight: 600 !important;">Location</label>
+                                    <input type="text" class="form-control" id="signup-location" style="background: white !important; color: #2c3e50 !important; border: 2px solid #e9ecef !important; border-radius: 10px !important; padding: 14px !important;">
+                                </div>
+                                <button type="submit" class="btn w-100" style="background: linear-gradient(135deg, #5793cf 0%, #34495e 100%) !important; color: white !important; border: none !important; border-radius: 10px !important; padding: 14px !important; font-weight: 600 !important; font-size: 1.1rem !important; box-shadow: 0 4px 15px rgba(44, 62, 80, 0.3) !important; transition: all 0.3s ease !important;">
+                                    Create Account
+                                </button>
+                                <div class="text-center mt-3">
+                                    <p style="color: #6c757d !important; margin-bottom: 0 !important;">
+                                        Already have an account? 
+                                        <a href="#" id="signin-here-link" style="color: #3498db !important; text-decoration: none !important; font-weight: 600 !important;">Sign in here</a>
+                                    </p>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+    <!-- Dashboard Section -->
+<div id="dashboard-section" class="d-none">
+    <div class="container mt-5 pt-4">
+        <!-- Welcome Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card hero-card card--interactive" style="background: #0075f2 !important; color: rgb(255, 255, 255) !important; border: 2px solid #e9ecef !important; border-radius: 12px !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;">
+                    <div class="card-body p-4">
+                        <h2 class="mb-2" style="color: rgb(255, 253, 253) !important; font-weight: 700 !important;">Welcome back, <span id="dashboard-user-name" style="color: #ffffff !important;">Shankar Mahadev</span>!</h2>
+                        <p class="mb-0 opacity-75" style="color: black !important;">Here's what's happening in your LocalLink community</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+             <!-- Stats Cards -->
+        <div class="row g-4 mb-4">
+            <div class="col-lg-3 col-md-6 scroll-reveal">
+                <div class="stats-card card card--interactive" style="background: white !important; color: black !important; border: 2px solid #e9ecef !important; border-radius: 12px !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;">
+                    <div class="card-body text-center">
+                        <div class="icon" style="color: #ffc107 !important;">
+                            <i class="fas fa-coins fa-2x"></i>
+                        </div>
+                        <div class="stats-heading" id="user-tokens" style="color: #000201 !important; font-size: 2.5rem !important; font-weight: 700 !important;">0</div>
+                        <div class="label" style="color: black !important; font-weight: 600 !important;">Time Tokens</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 scroll-reveal">
+                <div class="stats-card card card--interactive" style="background: white !important; color: black !important; border: 2px solid #e9ecef !important; border-radius: 12px !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;">
+                    <div class="card-body text-center">
+                        <div class="icon" style="color: #1e4681 !important;">
+                            <i class="fas fa-chalkboard-teacher fa-2x"></i>
+                        </div>
+                        <div class="stats-heading" id="user-skills-offered" style="color: #000000 !important; font-size: 2.5rem !important; font-weight: 700 !important;">0</div>
+                        <div class="label" style="color: black !important; font-weight: 600 !important;">Skills Offered</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 scroll-reveal">
+                <div class="stats-card card card--interactive" style="background: white !important; color: black !important; border: 2px solid #e9ecef !important; border-radius: 12px !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;">
+                    <div class="card-body text-center">
+                        <div class="icon" style="color: #000000 !important;">
+                            <i class="fas fa-graduation-cap fa-2x"></i>
+                        </div>
+                        <div class="stats-heading" id="user-skills-wanted" style="color: #000000 !important; font-size: 2.5rem !important; font-weight: 700 !important;">0</div>
+                        <div class="label" style="color: black !important; font-weight: 600 !important;">Skills Wanted</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 scroll-reveal">
+                <div class="stats-card card card--interactive" style="background: white !important; color: black !important; border: 2px solid #e9ecef !important; border-radius: 12px !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;">
+                    <div class="card-body text-center">
+                        <div class="icon" style="color: #952932 !important;">
+                            <i class="fas fa-users fa-2x"></i>
+                        </div>
+                        <div class="stats-heading" style="color: #000403 !important; font-size: 2.5rem !important; font-weight: 700 !important;">5</div>
+                        <div class="label" style="color: black !important; font-weight: 600 !important;">Community Members</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+         <!-- Quick Actions -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="feature-card card card--interactive" style="background: white !important; color: black !important; border: 2px solid #e9ecef !important; border-radius: 12px !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;">
+                    <div class="card-header" style="background: #f8f9fa !important; border-bottom: 2px solid #e9ecef !important;">
+                        <h4 class="card-heading mb-0" style="color: black !important; font-weight: 700 !important;">Quick Actions</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <button class="btn w-100" id="browse-skills-btn" style="background: #0075f2 !important; color: white !important; border: 2px solid #20c997 !important; border-radius: 10px !important; padding: 15px !important; font-weight: 600 !important; font-size: 1.1rem !important; box-shadow: 0 4px 8px rgba(32, 201, 151, 0.3) !important;">
+                                    <i class="fas fa-search me-2"></i>Browse Skills
+                                </button>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn w-100" id="manage-profile-btn" style="background: #0075f2 !important; color: white !important; border: 2px solid #20c997 !important; border-radius: 10px !important; padding: 15px !important; font-weight: 600 !important; font-size: 1.1rem !important; box-shadow: 0 4px 8px rgba(32, 201, 151, 0.3) !important;">
+                                    <i class="fas fa-user-edit me-2"></i>Manage Profile
+                                </button>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn w-100" id="view-activity-btn" style="background: #0075f2 !important; color: white !important; border: 2px solid #20c997 !important; border-radius: 10px !important; padding: 15px !important; font-weight: 600 !important; font-size: 1.1rem !important; box-shadow: 0 4px 8px rgba(32, 201, 151, 0.3) !important;">
+                                    <i class="fas fa-chart-line me-2"></i>View Activity
+                                </button>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn w-100" id="add-skills-btn" style="background: #0075f2 !important; color: white !important; border: 2px solid #20c997 !important; border-radius: 10px !important; padding: 15px !important; font-weight: 600 !important; font-size: 1.1rem !important; box-shadow: 0 4px 8px rgba(32, 201, 151, 0.3) !important;">
+                                    <i class="fas fa-plus me-2"></i>Add Skills
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+ <!-- Content Sections -->
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="skill-card card card--interactive" style="background: white !important; color: black !important; border: 2px solid #e9ecef !important; border-radius: 12px !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;">
+                    <div class="card-header" style="background: #f8f9fa !important; border-bottom: 2px solid #e9ecef !important;">
+                        <h5 class="card-heading mb-0" style="color: black !important; font-weight: 700 !important;">Available Skills in Your Area</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="dashboard-skills-list">
+                            <!-- Skills will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="feature-card card card--interactive" style="background: white !important; color: black !important; border: 2px solid #e9ecef !important; border-radius: 12px !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;">
+                    <div class="card-header" style="background: #f8f9fa !important; border-bottom: 2px solid #e9ecef !important;">
+                        <h5 class="card-heading mb-0" style="color: black !important; font-weight: 700 !important;">Community Highlights</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-4" style="border-left: 4px solid #20c997 !important; padding-left: 15px !important;">
+                            <strong style="color: #20c997 !important; font-weight: 700 !important;">Top Skill Provider</strong><br>
+                            <small style="color: black !important; font-weight: 600 !important;">David Kim - 41 tokens</small>
+                        </div>
+                        <div class="mb-4" style="border-left: 4px solid #20c997 !important; padding-left: 15px !important;">
+                            <strong style="color: #20c997 !important; font-weight: 700 !important;">Most Popular Skills</strong><br>
+                            <small style="color: black !important; font-weight: 600 !important;">Guitar Lessons & Cooking</small>
+                        </div>
+                        <div style="border-left: 4px solid #20c997 !important; padding-left: 15px !important;">
+                            <strong style="color: #20c997 !important; font-weight: 700 !important;">Community Growth</strong><br>
+                            <small style="color: black !important; font-weight: 600 !important;">5 active members</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="skills-section" class="d-none">
+    <div class="container mt-5 pt-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2 class="section-heading mb-3">Skills Marketplace</h2>
+                <p class="lead text-muted">Discover and connect with talented people in your community</p>
+            </div>
+        </div>
+
+        <!-- Search and Filters - Enhanced with Borders -->
+        <div class="search-filters mb-4 feature-card card card--interactive" style="background: white !important; border: 2px solid #dee2e6 !important; border-radius: 12px !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;">
+            <div class="card-body">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label class="form-label" style="color: black !important; font-weight: 600; margin-bottom: 8px;">Search skills...</label>
+                            <div class="input-group" style="border: 1px solid #ced4da !important; border-radius: 8px !important; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;">
+                                <input type="text" class="form-control" placeholder="Search skills..." id="skill-search" style="background: white !important; color: black !important; border: none !important; padding: 12px !important;">
+                                <button class="btn btn--primary" id="search-btn" style="border: none !important; border-radius: 0 !important; padding: 12px 16px !important;">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label class="form-label" style="color: black !important; font-weight: 600; margin-bottom: 8px;">Category</label>
+                            <select class="form-select" id="category-filter" style="background: white !important; color: black !important; border: 1px solid #ced4da !important; border-radius: 8px !important; padding: 12px !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important; cursor: pointer; appearance: none; background-image: url('data:image/svg+xml;utf8,<svg fill=\"black\" height=\"24\" viewBox=\"0 0 24 24\" width=\"24\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M7 10l5 5 5-5z\"/></svg>') !important; background-repeat: no-repeat !important; background-position: right 12px center !important; background-size: 16px !important;">
+                                <option value="">All Categories</option>
+                                <option value="technology">Technology</option>
+                                <option value="creative">Creative Arts</option>
+                                <option value="music">Music</option>
+                                <option value="language">Languages</option>
+                                <option value="sports">Sports & Fitness</option>
+                                <option value="business">Business</option>
+                                <option value="home">Home & Garden</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label class="form-label" style="color: black !important; font-weight: 600; margin-bottom: 8px;">Duration</label>
+                            <select class="form-select" id="time-filter" style="background: white !important; color: black !important; border: 1px solid #ced4da !important; border-radius: 8px !important; padding: 12px !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important; cursor: pointer; appearance: none; background-image: url('data:image/svg+xml;utf8,<svg fill=\"black\" height=\"24\" viewBox=\"0 0 24 24\" width=\"24\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M7 10l5 5 5-5z\"/></svg>') !important; background-repeat: no-repeat !important; background-position: right 12px center !important; background-size: 16px !important;">
+                                <option value="">Any Duration</option>
+                                <option value="1">1 hour</option>
+                                <option value="2">2 hours</option>
+                                <option value="3">3 hours</option>
+                                <option value="4">4+ hours</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label class="form-label" style ="color: black !important; font-weight: 600; margin-bottom: 8px; opacity: 0;">Clear</label>
+                            <button class="btn btn--outline w-100" onclick="clearFilters()" style="border: 1px solid #6c757d !important; border-radius: 8px !important; padding: 12px !important; color: #ffffff !important; background: rgb(137, 59, 59) !important;">
+                                <i class="fas fa-times me-2"></i>Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+            <!-- Skills Grid -->
+            <div class="row g-4" id="skills-grid">
+                <!-- Skills will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Messaging Modal -->
+    <div class="modal fade" id="messagingModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content card--interactive">
+                <div class="modal-header">
+                    <div class="d-flex align-items-center">
+                        <div class="user-avatar me-3">
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
+                                 style="width: 45px; height: 45px; font-size: 16px;" id="message-user-avatar">
+                            </div>
+                        </div>
+                        <div>
+                            <h5 class="modal-heading mb-0" id="message-user-name">User Name</h5>
+                            <small class="text-muted" id="message-user-skill">Skill Name</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <!-- Messages Container -->
+                    <div id="messages-container" class="messages-container" style="height: 400px; overflow-y: auto; padding: 20px;">
+                        <div class="text-center text-muted py-4" id="no-messages">
+                            <i class="fas fa-comments fa-2x mb-2"></i>
+                            <p>No messages yet. Start a conversation!</p>
+                        </div>
+                        <!-- Messages will be populated here -->
+                    </div>
+                    
+                    <!-- Message Input -->
+                    <div class="message-input-container p-3 border-top">
+                        <div class="input-group">
+                            <input type="text" class="form-control" placeholder="Type your message..." id="message-input">
+                            <button class="btn btn-primary" id="send-message-btn">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<!-- Profile Section -->
+<div id="profile-section" class="d-none">
+    <div class="container mt-5 pt-4">
+        <div class="row">
+            <div class="col-lg-4">
+                <!-- User Info Card -->
+                <div class="profile-card card card--interactive" style="background: white !important; color: black !important; border: 2px solid #dee2e6 !important; border-radius: 12px !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;">
+                    <div class="card-body text-center">
+                        <div class="profile-avatar-placeholder" style="border: 3px solid #007bff !important;">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <h4 class="card-heading" id="profile-name" style="color: black !important; border-bottom: 2px solid #e9ecef !important; padding-bottom: 10px !important; margin-bottom: 15px !important;">Shankar</h4>
+                        <p class="text-muted" id="profile-location" style="color: black !important; margin-bottom: 20px !important;">Chennai</p>
+                        <div class="row text-center">
+                            <div class="col-4" style="border-right: 1px solid #e9ecef !important;">
+                                <div class="stats-heading" id="profile-tokens" style="color: black !important; font-size: 1.5rem; font-weight: bold;">20</div>
+                                <small class="text-muted" style="color: black !important;">Tokens</small>
+                            </div>
+                            <div class="col-4" style="border-right: 1px solid #e9ecef !important;">
+                                <div class="stats-heading" id="profile-exchanges" style="color: black !important; font-size: 1.5rem; font-weight: bold;">Exchange</div>
+                                <small class="text-muted" style="color: black !important;">Exchanges</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="stats-heading" id="profile-rating" style="color: black !important; font-size: 1.5rem; font-weight: bold;">Rating</div>
+                                <small class="text-muted" style="color: black !important;">Rating</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-8">
+                <!-- Profile Information Card -->
+                <div class="profile-card card card--interactive" style="background: white !important; color: black !important; border: 2px solid #dee2e6 !important; border-radius: 12px !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;">
+                    <div class="card-header" style="background: #f8f9fa !important; border-bottom: 2px solid #dee2e6 !important; border-radius: 10px 10px 0 0 !important;">
+                        <h5 class="card-heading mb-0" style="color: black !important; font-weight: bold;">Profile Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="profile-form" class="profile-form">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-4" style="border: 1px solid #e9ecef !important; border-radius: 8px !important; padding: 15px !important; background: #fafafa !important;">
+                                        <label for="profile-email" class="form-label" style="color: black !important; font-weight: 600; margin-bottom: 8px;">Email Address</label>
+                                        <input type="email" class="form-control" id="profile-email" value="mahadevshankar888@gmail.com" style="background: white !important; color: black !important; border: 1px solid #ced4da !important; border-radius: 6px !important; padding: 10px !important;">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-4" style="border: 1px solid #e9ecef !important; border-radius: 8px !important; padding: 15px !important; background: #fafafa !important;">
+                                        <label for="profile-location-input" class="form-label" style="color: black !important; font-weight: 600; margin-bottom: 8px;">Location</label>
+                                        <input type="text" class="form-control" id="profile-location-input" value="Chennai" style="background: white !important; color: black !important; border: 1px solid #ced4da !important; border-radius: 6px !important; padding: 10px !important;">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-4" style="border: 1px solid #e9ecef !important; border-radius: 8px !important; padding: 15px !important; background: #fafafa !important;">
+                                <label for="profile-bio" class="form-label" style="color: black !important; font-weight: 600; margin-bottom: 8px;">Bio</label>
+                                <textarea class="form-control" id="profile-bio" rows="3" placeholder="Tell us about yourself..." style="background: white !important; color: black !important; border: 1px solid #ced4da !important; border-radius: 6px !important; padding: 10px !important; resize: vertical;"></textarea>
+                            </div>
+                            <div class="text-center">
+                                <button type="submit" class="btn btn--primary" style="padding: 12px 40px !important; font-weight: 600 !important; border-radius: 8px !important; border: 2px solid #007bff !important; box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;">Update Profile</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Skills Management Card -->
+                <div class="profile-card card card--interactive mt-4" style="background: white !important; color: black !important; border: 2px solid #dee2e6 !important; border-radius: 12px !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;">
+                    <div class="card-header" style="background: #f8f9fa !important; border-bottom: 2px solid #dee2e6 !important; border-radius: 10px 10px 0 0 !important;">
+                        <h5 class="card-heading mb-0" style="color: black !important; font-weight: bold;">My Skills</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div style="border: 2px solid #28a745 !important; border-radius: 10px !important; padding: 20px !important; background: #f8fff9 !important; margin-bottom: 20px !important;">
+                                    <h6 class="sub-heading mb-3" style="color: black !important; font-weight: 600; border-left: 4px solid #28a745 !important; padding-left: 12px;">Skills I Offer</h6>
+                                    <div id="skills-offered-list" class="mb-3">
+                                        <div class="skill-item" style="border: 1px solid #d4edda !important; border-radius: 6px !important; padding: 10px !important; margin-bottom: 8px !important; background: white !important;">
+                                            Python ▼
+                                        </div>
+                                        <div class="skill-item" style="border: 1px solid #d4edda !important; border-radius: 6px !important; padding: 10px !important; margin-bottom: 8px !important; background: white !important;">
+                                            Postery & Ceramics ▼
+                                        </div>
+                                        <div class="skill-item" style="border: 1px solid #d4edda !important; border-radius: 6px !important; padding: 10px !important; margin-bottom: 8px !important; background: white !important;">
+                                            Social Media Management ▼
+                                        </div>
+                                    </div>
+                                    <div class="input-group mb-3">
+                                        <input type="text" class="form-control" placeholder="Add skill..." id="new-skill-offered" style="background: white !important; color: black !important; border: 1px solid #ced4da !important; border-radius: 6px 0 0 6px !important; padding: 10px !important;">
+                                        <button class="btn btn--secondary" id="add-skill-offered" style="border-radius: 0 6px 6px 0 !important; border: 1px solid #ced4da !important; border-left: none !important;">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div style="border: 2px solid #007bff !important; border-radius: 10px !important; padding: 20px !important; background: #f8f9ff !important; margin-bottom: 20px !important;">
+                                    <h6 class="sub-heading mb-3" style="color: black !important; font-weight: 600; border-left: 4px solid #007bff !important; padding-left: 12px;">Skills I Want to Learn</h6>
+                                    <div id="skills-wanted-list" class="mb-3">
+                                        <div class="skill-item" style="border: 1px solid #cce7ff !important; border-radius: 6px !important; padding: 10px !important; margin-bottom: 8px !important; background: white !important;">
+                                            Photography & Photo Editing ▼
+                                        </div>
+                                        <div class="skill-item" style="border: 1px solid #cce7ff !important; border-radius: 6px !important; padding: 10px !important; margin-bottom: 8px !important; background: white !important;">
+                                            Ukulele Lessons ▼
+                                        </div>
+                                        <div class="skill-item" style="border: 1px solid #cce7ff !important; border-radius: 6px !important; padding: 10px !important; margin-bottom: 8px !important; background: white !important;">
+                                            Python Programming ▼
+                                        </div>
+                                    </div>
+                                    <div class="input-group mb-3">
+                                        <input type="text" class="form-control" placeholder="Add skill..." id="new-skill-wanted" style="background: white !important; color: black !important; border: 1px solid #ced4da !important; border-radius: 6px 0 0 6px !important; padding: 10px !important;">
+                                        <button class="btn btn--primary" id="add-skill-wanted" style="border-radius: 0 6px 6px 0 !important; border: 1px solid #007bff !important; border-left: none !important;">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+    <!-- Modals -->
+    <!-- Get Started Modal -->
+    <div class="modal fade" id="getStartedModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content card--interactive">
+                <div class="modal-header">
+                    <h5 class="modal-heading">How do you want to use LocalLink?</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="option-card card border-2 border-primary text-center p-4" data-mode="learn" style="cursor: pointer;">
+                                <i class="fas fa-graduation-cap fa-3x mb-3 text-primary"></i>
+                                <h5 class="feature-heading">I want to learn</h5>
+                                <p class="text-muted small">Find teachers and learn new skills</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="option-card card border-2 border-success text-center p-4" data-mode="teach" style="cursor: pointer;">
+                                <i class="fas fa-chalkboard-teacher fa-3x mb-3 text-success"></i>
+                                <h5 class="feature-heading">I want to teach</h5>
+                                <p class="text-muted small">Share your skills with others</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="option-card card border-2 border-warning text-center p-4" data-mode="both" style="cursor: pointer;">
+                                <i class="fas fa-handshake fa-3x mb-3 text-warning"></i>
+                                <h5 class="feature-heading">Both!</h5>
+                                <p class="text-muted small">Learn and teach in the community</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Skill Selection Sections (will be shown/hidden by JavaScript) -->
+                    <div id="learn-skills-section" class="skill-selection-section d-none mt-4">
+                        <h6 class="sub-heading">Select skills you want to learn:</h6>
+                        <div class="skills-container"></div>
+                    </div>
+                    
+                    <div id="teach-skills-section" class="skill-selection-section d-none mt-4">
+                        <h6 class="sub-heading">Select skills you want to teach:</h6>
+                        <div class="skills-container"></div>
+                    </div>
+                    
+                    <div id="both-skills-section" class="skill-selection-section d-none mt-4">
+                        <h6 class="sub-heading">Select skills you want to learn and teach:</h6>
+                        <div class="skills-container"></div>
+                    </div>
+                    
+                    <!-- Selected Skills Display -->
+                    <div class="mt-4">
+                        <h6 class="sub-heading">Your Selected Skills:</h6>
+                        <div id="selected-skills-display" class="border rounded p-3 bg-light">
+                            <p class="text-muted text-center mb-0">No skills selected yet</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn--outline" id="get-started-cancel">Cancel</button>
+                    <button type="button" class="btn btn--primary" id="get-started-continue">Continue</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Exchange Modal -->
+    <div class="modal fade" id="exchangeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content card--interactive">
+                <div class="modal-header">
+                    <h5 class="modal-heading">Request Skill Exchange</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="exchange-details">
+                        <!-- Exchange details will be populated by JavaScript -->
+                    </div>
+                    <div class="alert alert-info">
+                        <h6>Cost: <span id="exchange-cost">0 tokens</span></h6>
+                        <p class="mb-0">This will be deducted from your token balance when the exchange is completed.</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn--outline" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn--primary" id="confirm-exchange">Request Exchange</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="feedbackModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content card--interactive">
+                <div class="modal-header">
+                    <h5 class="modal-heading">Rate Your Experience</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>How was your experience with <span id="feedback-provider-name">the provider</span>?</p>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Rating</label>
+                        <div class="rating-stars">
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="rating" id="rating1" value="1">
+                                <label class="form-check-label" for="rating1">1 ★</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="rating" id="rating2" value="2">
+                                <label class="form-check-label" for="rating2">2 ★</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="rating" id="rating3" value="3">
+                                <label class="form-check-label" for="rating3">3 ★</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="rating" id="rating4" value="4">
+                                <label class="form-check-label" for="rating4">4 ★</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="rating" id="rating5" value="5">
+                                <label class="form-check-label" for="rating5">5 ★</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="feedback-comment" class="form-label">Comment (optional)</label>
+                        <textarea class="form-control" id="feedback-comment" rows="3" placeholder="Share your experience..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn--outline" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn--primary" id="submit-feedback">Submit Feedback</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toast-container">
+        <!-- Toasts will be added here by JavaScript -->
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        // Scroll reveal animation
+        function initScrollReveal() {
+            const revealElements = document.querySelectorAll('.scroll-reveal');
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('revealed');
+                    }
+                });
+            }, { threshold: 0.1 });
+            
+            revealElements.forEach(element => {
+                observer.observe(element);
+            });
+        }
+
+        // Landing page button functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get Started buttons
+            const getStartedBtns = document.querySelectorAll('#hero-get-started, #cta-get-started');
+            getStartedBtns.forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    showGetStartedModal();
+                });
+            });
+            
+            // Learn More button
+            const learnMoreBtn = document.getElementById('hero-learn');
+            if (learnMoreBtn) {
+                learnMoreBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    document.getElementById('how-it-works').scrollIntoView({ 
+                        behavior: 'smooth' 
+                    });
+                });
+            }
+            
+            // Populate testimonials
+            populateTestimonials();
+        });
+
+        function populateTestimonials() {
+            const testimonialsContainer = document.getElementById('testimonials-container');
+            if (!testimonialsContainer) return;
+            
+            const testimonials = [
+                {
+                    name: "Sarah M.",
+                    skill: "Graphic Design",
+                    text: "I traded web design lessons for Spanish practice. Now I'm bilingual and have a new career!",
+                    rating: 5
+                },
+                {
+                    name: "Mike T.",
+                    skill: "Cooking & Guitar",
+                    text: "Taught guitar to my neighbor's kids while learning authentic Italian cooking. Best exchange ever!",
+                    rating: 5
+                },
+                {
+                    name: "Lisa K.",
+                    skill: "Yoga & Photography",
+                    text: "Found my yoga instructor and photography mentor right in my apartment building. LocalLink is amazing!",
+                    rating: 5
+                }
+            ];
+            
+            testimonialsContainer.innerHTML = testimonials.map(testimonial => `
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body text-center p-4">
+                            <div class="mb-3 text-warning">
+                                ${'★'.repeat(testimonial.rating)}${'☆'.repeat(5 - testimonial.rating)}
+                            </div>
+                            <p class="card-text fst-italic">"${testimonial.text}"</p>
+                            <footer class="blockquote-footer mt-3">
+                                <strong>${testimonial.name}</strong> <br>
+                                <small class="text-muted">${testimonial.skill}</small>
+                            </footer>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', initScrollReveal);
+    </script>
+</body>
+</html>
