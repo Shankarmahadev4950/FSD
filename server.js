@@ -874,13 +874,14 @@ fastify.put('/api/users/profile', { preHandler: authenticate }, async (request, 
 // Add this to your server.js for automatic cleanup
 setInterval(async () => {
     try {
-        const response = await fetch(`${API_BASE}/users/check-online-status`);
+        // Use the server's own endpoint for cleanup
+        const response = await fetch(`http://localhost:${process.env.PORT || 5000}/api/users/check-online-status`);
         const data = await response.json();
         console.log('🔄 Auto offline check:', data);
     } catch (error) {
         console.error('Auto offline check failed:', error);
     }
-}, 10 * 60 * 1000); // Run every 10 minutes
+}, 10 * 60 * 1000); // Run every 10 minutes // Run every 10 minutes
 // ✅ TEST DATABASE OPERATIONS
 fastify.post('/api/debug/init-test', async (request, reply) => {
     try {
