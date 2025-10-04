@@ -30,7 +30,18 @@ console.log('================================');
 //fastify.get('*', function (request, reply) {
  // reply.sendFile('index.html');
 //});
-
+const authenticate = async (request, reply) => {
+    try {
+        await request.jwtVerify();
+        const user = await User.findById(request.user.id);
+        if (!user) {
+            return reply.status(401).send({ error: 'Invalid token' });
+        }
+        request.currentUser = user;
+    } catch (err) {
+        reply.status(401).send({ error: 'Authentication required' });
+    }
+};
 // ✅ OFFLINE MESSAGE QUEUEING
 async function deliverMessage(messageData) {
     const recipient = await User.findById(messageData.recipientId);
@@ -516,20 +527,6 @@ fastify.get('/api/health', async (request, reply) => {
         database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'
     };
 });
-
-// ✅ AUTHENTICATION MIDDLEWARE
-const authenticate = async (request, reply) => {
-    try {
-        await request.jwtVerify();
-        const user = await User.findById(request.user.id);
-        if (!user) {
-            return reply.status(401).send({ error: 'Invalid token' });
-        }
-        request.currentUser = user;
-    } catch (err) {
-        reply.status(401).send({ error: 'Authentication required' });
-    }
-};
 
 // ✅ IMPROVED ONLINE STATUS WITH ACTIVITY TIMEOUT
 fastify.post('/api/users/online', { preHandler: authenticate }, async (request, reply) => {
