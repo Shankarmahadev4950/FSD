@@ -7,9 +7,14 @@ const fastify = require('fastify')({
         level: 'info'
     }
 });
+
 const path = require('path');
 const fastifyStatic = require('@fastify/static');
 const mongoose = require('mongoose');
+// ✅ ACCURATE ONLINE STATUS TRACKING
+const activeConnections = new Map();
+const WebSocket = require('ws');
+const wss = new WebSocket.Server({ port: 5001 });
 
 // ✅ ADD DEBUG LOGS TO CHECK ENV VARIABLES
 console.log('=== LocalLink Server Starting ===');
@@ -26,6 +31,99 @@ console.log('================================');
 //fastify.get('*', function (request, reply) {
  // reply.sendFile('index.html');
 //});
+
+// ✅ OFFLINE MESSAGE QUEUEING
+async function deliverMessage(messageData) {
+    const recipient = await User.findById(messageData.recipientId);
+    
+    if (recipient.isOnline) {
+        // Deliver immediately via WebSocket
+        const recipientWs = activeConnections.get(recipient._id.toString());
+        if (recipientWs) {
+            recipientWs.send(JSON.stringify({
+                type: 'new_message',
+                message: messageData
+            }));
+        }
+    } else {
+        // Queue message for when user comes online
+        await Message.updateOne(
+            { _id: messageData._id },
+            { $set: { isDelivered: false } }
+        );
+    }
+}
+
+// Update user activity with timeout
+fastify.post('/api/users/activity', { preHandler: authenticate }, async (request, reply) => {
+    try {
+        const user = await User.findByIdAndUpdate(
+            request.currentUser._id,
+            { 
+                isOnline: true,
+                lastActivity: new Date(),
+                lastSeen: new Date()
+            },
+            { new: true }
+        );
+        
+        // Set timeout to mark offline after 2 minutes of inactivity
+        setTimeout(async () => {
+            const currentUser = await User.findById(request.currentUser._id);
+            if (currentUser && new Date() - currentUser.lastActivity > 120000) {
+                currentUser.isOnline = false;
+                await currentUser.save();
+            }
+        }, 120000);
+        
+        return { success: true };
+    } catch (error) {
+        console.error('Activity update error:', error);
+    }
+});
+
+wss.on('connection', (ws) => {
+    ws.on('message', (message) => {
+        const data = JSON.parse(message);
+        
+        if (data.type === 'register') {
+            // Register user connection
+            activeConnections.set(data.userId, ws);
+        }
+        
+        if (data.type === 'send_message') {
+            // Deliver message or queue if offline
+            deliverMessage(data);
+        }
+        
+        if (data.type === 'exchange_request') {
+            // Notify recipient of exchange request
+            notifyExchangeRequest(data);
+        }
+    });
+});
+
+// ✅ DYNAMIC RATINGS FROM FEEDBACK
+fastify.get('/api/users/:userId/rating', async (request, reply) => {
+    try {
+        const feedbacks = await Feedback.find({ 
+            forProvider: true,
+            'exchange.provider': request.params.userId 
+        }).populate('exchange');
+        
+        const averageRating = feedbacks.length > 0 
+            ? feedbacks.reduce((sum, fb) => sum + fb.rating, 0) / feedbacks.length 
+            : 0;
+            
+        return { 
+            rating: Math.round(averageRating * 10) / 10,
+            reviewCount: feedbacks.length 
+        };
+    } catch (error) {
+        console.error('Rating calculation error:', error);
+        return { rating: 0, reviewCount: 0 };
+    }
+});
 
 // ✅ ADD MISSING AUTHENTICATION ROUTES
 fastify.post('/api/auth/register', async (request, reply) => {
