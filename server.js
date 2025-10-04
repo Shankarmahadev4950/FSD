@@ -372,7 +372,8 @@ fastify.post('/api/auth/reset-password', async (request, reply) => {
 // ✅ FIXED CORS CONFIGURATION - IMPROVED CORS HANDLING
 fastify.register(require('@fastify/cors'), {
     origin: [
-        'https://fsd-locallink.onrender.com',
+        'https://shankarmahodov4950.github.io', // Your GitHub Pages URL
+        'https://shankarmahodov4950.github.io/FSD/', // Full path if needed
         'http://localhost:5500',
         'http://127.0.0.1:5500', 
         'http://localhost:8000',
@@ -402,6 +403,8 @@ fastify.register(require('@fastify/cors'), {
 // ✅ IMPROVED CORS PREFLIGHT HANDLER
 fastify.addHook('onRequest', (request, reply, done) => {
     const allowedOrigins = [
+        'https://shankarmahodov4950.github.io',
+        'https://shankarmahodov4950.github.io/FSD/',
         'http://localhost:5500',
         'http://127.0.0.1:5500',
         'http://localhost:3000',
