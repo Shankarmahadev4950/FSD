@@ -295,10 +295,7 @@ let authToken = null;
 let resetEmail = '';
 
 // API Base URL
-const API_BASE = window.location.hostname.includes('render.com') 
-    ? 'https://fsd-locallink.onrender.com/api' 
-    : 'http://localhost:5000/api';
-
+const API_BASE = 'https://fsd-locallink.onrender.com/api';
 
 // ✅ TOKEN MANAGEMENT - Persistent Sessions
 const TokenManager = {
