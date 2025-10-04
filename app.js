@@ -555,6 +555,90 @@ function setupMessageSending() {
     }
 }
 
+// ✅ GLOBAL WEBSOCKET EVENT HANDLER (add this to your app.js)
+document.addEventListener('DOMContentLoaded', function() {
+    // Listen for WebSocket connection events
+    window.addEventListener('websocketConnected', function(event) {
+        console.log('✅ Global WebSocket connected event - initializing video calls');
+        videoCallManager.initializeSocket(event.detail.socket);
+    });
+    
+    // If socket is already available, initialize immediately
+    if (typeof socket !== 'undefined' && socket.readyState === WebSocket.OPEN) {
+        console.log('✅ Socket already connected - initializing video calls');
+        videoCallManager.initializeSocket(socket);
+    }
+});
+
+function connectWebSocket() {
+    try {
+        // Your existing WebSocket connection code
+        socket = new WebSocket('ws://localhost:5001'); // or your WebSocket URL
+        
+        socket.onopen = function(event) {
+            console.log('✅ WebSocket connected successfully');
+            
+            // ✅ CRITICAL: Initialize video call manager
+            videoCallManager.initializeSocket(socket);
+            
+            // Also dispatch global event for other components
+            window.dispatchEvent(new CustomEvent('websocketConnected', {
+                detail: { socket: socket }
+            }));
+        };
+        
+        socket.onmessage = function(event) {
+            // Your existing message handling
+            const data = JSON.parse(event.data);
+            // ... handle other messages
+        };
+        
+    } catch (error) {
+        console.error('❌ WebSocket connection failed:', error);
+    }
+}
+
+// ✅ SAFE VIDEO CALL BUTTON FUNCTION
+// ✅ ENHANCED VIDEO CALL BUTTON FUNCTION
+function startVideoCall(skillId, recipientId, recipientName) {
+    console.log('🎬 Starting video call to:', recipientName);
+    
+    // Check if user is logged in
+    if (!currentUser) {
+        NotificationManager.show('Please login to start a video call', 'error');
+        showAuthForm('signin');
+        return;
+    }
+    
+    // Check if video call system is initialized
+    if (typeof videoCallManager === 'undefined') {
+        NotificationManager.show('Video call system is not available. Please refresh the page.', 'error');
+        return;
+    }
+    
+    // Check if WebSocket is connected
+    if (!videoCallManager.socket || videoCallManager.socket.readyState !== WebSocket.OPEN) {
+        NotificationManager.show('Video call connection is not ready. Please wait a moment and try again.', 'warning');
+        
+        // Try to reinitialize
+        if (typeof socket !== 'undefined' && socket.readyState === WebSocket.OPEN) {
+            videoCallManager.initializeSocket(socket);
+            // Retry after a short delay
+            setTimeout(() => startVideoCall(skillId, recipientId, recipientName), 1000);
+        }
+        return;
+    }
+    
+    // Check if already in a call
+    if (videoCallManager.isCallActive) {
+        NotificationManager.show('You are already in a video call. Please end the current call first.', 'warning');
+        return;
+    }
+    
+    // All checks passed - start the call
+    videoCallManager.startCall(skillId, recipientId, recipientName);
+}
+
 // ✅ SEND MESSAGE
 async function sendMessage() {
     if (!currentChatSkill || !currentUser) return;
@@ -4092,7 +4176,6 @@ function setupSearchListeners() {
     }
 }
 
-// ✅ FIXED APP INITIALIZATION - REMOVED UNDEFINED FUNCTION CALL
 async function initializeApp() {
     console.log('🚀 Initializing LocalLink app...');
     
@@ -4129,7 +4212,6 @@ async function initializeApp() {
             
             // ✅ CRITICAL: Mark user as online immediately after login
             await OnlineStatusManager.setOnline();
-            // Removed the undefined sendHeartbeat() call that was causing the error
             
             console.log('✅ User marked as online after login');
         }
@@ -4140,6 +4222,9 @@ async function initializeApp() {
         } else {
             showSection('landing');
         }
+        
+        // ✅ NEW: INITIALIZE VIDEO CALL SYSTEM
+        initializeVideoCallSystem();
         
         // Initialize all app components
         populateTestimonials();
@@ -4156,6 +4241,50 @@ async function initializeApp() {
         NotificationManager.show('Failed to initialize application', 'error');
     }
 }
+
+function initializeVideoCallSystem() {
+    console.log('🎥 Initializing video call system...');
+    
+    // Check if videoCallManager exists (videocall.js loaded)
+    if (typeof videoCallManager === 'undefined') {
+        console.warn('⚠️ VideoCallManager not loaded - make sure videocall.js is included in HTML');
+        return;
+    }
+    
+    // Strategy 1: If WebSocket is already available, initialize immediately
+    if (typeof socket !== 'undefined' && socket.readyState === WebSocket.OPEN) {
+        console.log('✅ WebSocket already connected - initializing video calls');
+        videoCallManager.initializeSocket(socket);
+        return;
+    }
+    
+    // Strategy 2: Set up a listener for future WebSocket connections
+    console.log('⏳ WebSocket not ready yet, setting up connection listener...');
+    
+    // Listen for custom event when WebSocket connects
+    window.addEventListener('websocketConnected', function(event) {
+        console.log('✅ WebSocket connected event received - initializing video calls');
+        videoCallManager.initializeSocket(event.detail.socket);
+    });
+    
+    // Strategy 3: Periodic check for WebSocket connection (fallback)
+    const videoCallInitInterval = setInterval(() => {
+        if (typeof socket !== 'undefined' && socket.readyState === WebSocket.OPEN) {
+            console.log('✅ WebSocket now connected - initializing video calls');
+            videoCallManager.initializeSocket(socket);
+            clearInterval(videoCallInitInterval);
+        }
+    }, 1000);
+    
+    // Clear interval after 15 seconds if still not connected
+    setTimeout(() => {
+        clearInterval(videoCallInitInterval);
+        if (!videoCallManager.socket) {
+            console.warn('⚠️ Video call system: WebSocket not available after timeout');
+        }
+    }, 15000);
+}
+
 // ✅ OPTIMIZED ONLINE STATUS MANAGER
 const OnlineStatusManager = {
     heartbeatInterval: null,
