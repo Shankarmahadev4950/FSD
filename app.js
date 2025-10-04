@@ -255,6 +255,12 @@ const appData = {
         }
     ]
 };
+
+// ✅ MOVE THESE TO TOP WITH OTHER VARIABLES (around line 60)
+let currentChatSkill = null;
+let messages = [];
+let messageInterval = null;
+let sessionInterval = null;
 // Add event listener for Get Started button
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, setting up Get Started button');
@@ -457,11 +463,6 @@ async function checkExistingSession() {
         TokenManager.removeToken();
     }
 }
-// ✅ MESSAGING SYSTEM
-let currentChatSkill = null;
-let messages = [];
-let messageInterval = null;
-
 // ✅ SHOW MESSAGING UI
 function showMessagingUI(skill) {
     currentChatSkill = skill;
@@ -995,10 +996,6 @@ const ActivityTracker = {
         }));
     }
 };
-
-// ✅ AUTO-SESSION TRACKING
-let sessionInterval;
-
 // ✅ ENHANCED DASHBOARD BUTTON HANDLERS
 function setupDashboardQuickActions() {
     // Browse Skills Button
@@ -3207,19 +3204,17 @@ function toggleActivityView() {
 // ✅ ENHANCED ACTIVITY DASHBOARD RENDERING
 function renderActivityDashboard() {
     console.log('Rendering activity dashboard');
-    
     const stats = ActivityTracker.getActivityStats();
-    
     if (!stats) {
         renderEmptyActivityState();
         return;
     }
-    
     renderActivityStats(stats);
     renderWeeklyActivityChart(stats.weeklyActivity);
     renderSkillsProgressChart(stats.learningProgress);
     renderCoursesCompleted(stats);
 }
+
 
 // ✅ FIXED RENDER ACTIVITY STATS
 function renderActivityStats(stats) {
@@ -4211,7 +4206,6 @@ async function initializeApp() {
             
             // ✅ CRITICAL: Mark user as online immediately after login
             await OnlineStatusManager.setOnline();
-            
             console.log('✅ User marked as online after login');
         }
         
@@ -4239,6 +4233,20 @@ async function initializeApp() {
         console.error('❌ App initialization failed:', error);
         NotificationManager.show('Failed to initialize application', 'error');
     }
+}
+
+if (typeof videoCallManager === 'undefined') {
+    var videoCallManager = {
+        initializeSocket: function(socket) {
+            console.log('🎥 VideoCallManager placeholder - socket initialized');
+        },
+        startCall: function(skillId, recipientId, recipientName) {
+            console.log('🎬 Starting video call to:', recipientName);
+            NotificationManager.show('Video call system is not fully loaded. Please refresh the page.', 'warning');
+        },
+        isCallActive: false,
+        socket: null
+    };
 }
 
 function initializeVideoCallSystem() {
@@ -4634,5 +4642,20 @@ window.removeSkill = removeSkill;
 window.requestExchange = requestExchange;
 window.searchSkills = searchSkills;
 window.clearSearch = clearSearch;
+window.showGetStartedModal = showGetStartedModal;
+window.showSection = showSection;
+window.showAuthForm = showAuthForm;
+window.handleSignin = handleSignin;
+window.handleSignup = handleSignup;
+window.handleLogout = handleLogout;
+window.startVideoCall = startVideoCall;
+window.toggleActivityView = toggleActivityView;
+window.renderActivityDashboard = renderActivityDashboard;
+window.searchSkills = searchSkills;
+window.clearFilters = clearFilters;
+window.requestExchange = requestExchange;
+window.addSkill = addSkillFromProfile;
+window.removeSkill = removeSkillFromProfile;
+window.handleSkillInputKeypress = handleSkillInputKeypress;
 
 console.log('LocalLink Application - All functions loaded successfully');
