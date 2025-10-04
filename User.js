@@ -17,6 +17,7 @@ const userSchema = new mongoose.Schema({
     },
     email: {
         type: String,
+        unique:true,
         required: true,
         lowercase: true,
         trim: true
@@ -195,7 +196,6 @@ userSchema.methods.toJSON = function() {
 };
 
 // Indexes
-userSchema.index({ email: 1 });
 userSchema.index({ resetPasswordOTP: 1, resetPasswordExpires: 1 });
 userSchema.index({ isOnline: 1 });
 userSchema.index({ location: 1 });
