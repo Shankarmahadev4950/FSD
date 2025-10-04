@@ -19,13 +19,13 @@ console.log('EMAIL_USER:', process.env.EMAIL_USER ? 'Loaded' : 'Missing');
 console.log('================================');
 
 
-fastify.register(fastifyStatic, {
-  root: path.join(__dirname),
-  prefix: '/',
-});
-fastify.get('*', function (request, reply) {
-  reply.sendFile('index.html');
-});
+//fastify.register(fastifyStatic, {
+ // root: path.join(__dirname),
+ // prefix: '/',
+//});
+//fastify.get('*', function (request, reply) {
+ // reply.sendFile('index.html');
+//});
 
 // ✅ ADD MISSING AUTHENTICATION ROUTES
 fastify.post('/api/auth/register', async (request, reply) => {
