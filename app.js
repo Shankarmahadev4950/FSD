@@ -2331,6 +2331,124 @@ function addSkillSearch(container, mode) {
     }
 }
 
+// ✅ COMPLETE SAFE SKILL HANDLER
+function handleSkillReference(skill) {
+    // Validate skill parameter
+    if (typeof skill === 'undefined') {
+        console.error('❌ Skill parameter is undefined');
+        return null;
+    }
+    
+    if (!skill) {
+        console.warn('⚠️ Skill is null or empty');
+        return null;
+    }
+    
+    // Ensure skill has required properties with fallbacks
+    const safeSkill = {
+        id: skill.id || 'unknown',
+        name: skill.name || 'Unnamed Skill',
+        category: skill.category || 'General',
+        description: skill.description || 'No description available',
+        providerName: skill.providerName || skill.provider?.name || 'Unknown User',
+        providerId: skill.providerId || skill.provider?.id,
+        timeRequired: skill.timeRequired || 1,
+        location: skill.location || 'Location not specified',
+        rating: skill.rating || 0,
+        isActive: skill.isActive !== false, // Default to true
+        providerOnline: skill.providerOnline || false,
+        providerLastSeen: skill.providerLastSeen || new Date().toISOString()
+    };
+    
+    console.log('✅ Safe skill object:', safeSkill.name);
+    return safeSkill;
+}
+
+// ✅ USAGE EXAMPLES:
+
+// Example 1: In skill card click handler
+function openSkillDetails(skillId) {
+    const skill = filteredSkills.find(s => s.id.toString() === skillId.toString());
+    const safeSkill = handleSkillReference(skill);
+    
+    if (!safeSkill) {
+        NotificationManager.show('Skill not found', 'error');
+        return;
+    }
+    
+    // Now safely use the skill
+    console.log('Opening details for:', safeSkill.name);
+    showMessagingUI(safeSkill);
+}
+
+// Example 2: In skill rendering
+function renderSkillCard(skill) {
+    const safeSkill = handleSkillReference(skill);
+    if (!safeSkill) return ''; // Return empty string if skill is invalid
+    
+    return `
+        <div class="skill-card">
+            <h3>${safeSkill.name}</h3>
+            <p>${safeSkill.description}</p>
+            <span class="category">${safeSkill.category}</span>
+        </div>
+    `;
+}
+
+// Example 3: In profile skill management
+function addSkillToProfile(skill) {
+    const safeSkill = handleSkillReference(skill);
+    if (!safeSkill) return;
+    
+    // Safe to use the skill now
+    currentUser.skillsToTeach = currentUser.skillsToTeach || [];
+    currentUser.skillsToTeach.push(safeSkill.name);
+    
+    updateUserProfile({
+        skillsToTeach: currentUser.skillsToTeach
+    });
+}
+
+// ✅ ENHANCED SKILL VALIDATION
+function validateSkill(skill) {
+    const errors = [];
+    
+    if (!skill) {
+        errors.push('Skill object is null or undefined');
+        return { isValid: false, errors };
+    }
+    
+    if (!skill.id && !skill.name) {
+        errors.push('Skill must have either id or name');
+    }
+    
+    if (skill.name && typeof skill.name !== 'string') {
+        errors.push('Skill name must be a string');
+    }
+    
+    if (skill.name && skill.name.trim().length === 0) {
+        errors.push('Skill name cannot be empty');
+    }
+    
+    return {
+        isValid: errors.length === 0,
+        errors,
+        skill: errors.length === 0 ? skill : null
+    };
+}
+
+// ✅ BULK SKILL PROCESSING
+function processSkills(skills) {
+    if (!Array.isArray(skills)) {
+        console.error('Skills must be an array');
+        return [];
+    }
+    
+    return skills
+        .map(skill => handleSkillReference(skill))
+        .filter(skill => skill !== null); // Remove invalid skills
+}
+
 function handleSkillSelection(skill, category, mode, isChecked) {
     const skillObj = { skill, category, mode };
     
@@ -4292,12 +4410,12 @@ function initializeVideoCallSystem() {
     }, 15000);
 }
 
-// ✅ OPTIMIZED ONLINE STATUS MANAGER
+// ✅ COMPLETE ONLINE STATUS MANAGER
 const OnlineStatusManager = {
     heartbeatInterval: null,
     isInitialized: false,
     lastHeartbeatTime: 0,
-    heartbeatCooldown: 30000, // 30 seconds between heartbeats
+    heartbeatCooldown: 30000,
     
     init: function() {
         if (this.isInitialized) return;
@@ -4314,20 +4432,17 @@ const OnlineStatusManager = {
     
     forceOnline: async function() {
         if (!currentUser) return;
-        
         console.log('🚀 Force setting user online...');
         await this.setOnline();
     },
     
     setOnline: async function() {
         if (!currentUser) return;
-        
         try {
             console.log('🔄 Setting user online...');
             const response = await apiRequest('/users/online', {
                 method: 'POST'
             });
-            
             if (response && response.success) {
                 console.log('✅ Online status set successfully');
                 return true;
@@ -4338,57 +4453,31 @@ const OnlineStatusManager = {
         return false;
     },
     
-    // Update user offline status
     setOffline: async function() {
         if (!currentUser) return;
-        
         try {
             const response = await apiRequest('/users/offline', {
                 method: 'POST'
             });
-            
             if (response && response.success) {
                 console.log('✅ User marked as offline successfully');
-            } else {
-                console.warn('⚠️ Offline update may have failed');
             }
         } catch (error) {
             console.error('❌ Failed to set offline status:', error);
-            
-            // Fallback: use direct fetch with keepalive
-            try {
-                await fetch(`${API_BASE}/users/offline`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${TokenManager.getToken()}`,
-                        'Content-Type': 'application/json'
-                    },
-                    keepalive: true
-                });
-                console.log('✅ Offline status set (fallback)');
-            } catch (fetchError) {
-                console.error('❌ Fallback offline also failed:', fetchError);
-            }
         }
     },
     
     sendHeartbeat: async function() {
         if (!currentUser) return;
-        
-        // Prevent too frequent heartbeats
         const now = Date.now();
-        if (now - this.lastHeartbeatTime < this.heartbeatCooldown) {
-            return;
-        }
+        if (now - this.lastHeartbeatTime < this.heartbeatCooldown) return;
         
         this.lastHeartbeatTime = now;
-        
         try {
             console.log('💓 Sending heartbeat...');
             const response = await apiRequest('/users/heartbeat', {
                 method: 'POST'
             });
-            
             if (response && response.success) {
                 console.log('✅ Heartbeat successful');
             }
@@ -4397,18 +4486,13 @@ const OnlineStatusManager = {
         }
     },
     
-    // Start periodic heartbeat with optimized timing
     startHeartbeat: function() {
-        if (this.heartbeatInterval) {
-            clearInterval(this.heartbeatInterval);
-        }
-        
-        // Send heartbeat every 30 seconds (reduced from 2 minutes for better responsiveness)
+        if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
         this.heartbeatInterval = setInterval(() => {
             if (currentUser && document.visibilityState === 'visible') {
                 this.sendHeartbeat();
             }
-        }, 30000); // 30 seconds
+        }, 30000);
     },
     
     stopHeartbeat: function() {
@@ -4418,10 +4502,8 @@ const OnlineStatusManager = {
         }
     },
     
-    // Format last seen time for display
     formatLastSeen: function(lastSeen) {
         if (!lastSeen) return 'Never';
-        
         const now = new Date();
         const lastSeenDate = new Date(lastSeen);
         const diffMs = now - lastSeenDate;
@@ -4433,11 +4515,9 @@ const OnlineStatusManager = {
         if (diffMins < 60) return `${diffMins}m ago`;
         if (diffHours < 24) return `${diffHours}h ago`;
         if (diffDays < 7) return `${diffDays}d ago`;
-        
         return lastSeenDate.toLocaleDateString();
     },
     
-    // Get online status badge HTML
     getStatusBadge: function(isOnline, lastSeen) {
         if (isOnline) {
             return '<span class="badge bg-success status-badge"><i class="fas fa-circle me-1"></i>Online</span>';
@@ -4447,58 +4527,42 @@ const OnlineStatusManager = {
         }
     },
     
-    // Setup all event listeners for online/offline tracking
     setupEventListeners: function() {
-        // Use a single visibility change handler
         document.addEventListener('visibilitychange', () => {
             if (!currentUser) return;
-            
             if (!document.hidden) {
-                console.log('📱 Page visible - marking online');
                 this.setOnline();
                 this.sendHeartbeat();
             } else {
-                console.log('📱 Page hidden - marking offline');
                 this.setOffline();
             }
         });
         
-        // Throttled activity tracking
         const throttledHeartbeat = this.throttle(() => {
             if (currentUser && document.visibilityState === 'visible') {
                 this.sendHeartbeat();
             }
-        }, 10000); // 10 second throttle
+        }, 10000);
         
         const activityEvents = ['mousedown', 'keypress', 'scroll', 'touchstart'];
         activityEvents.forEach(event => {
             document.addEventListener(event, throttledHeartbeat, { passive: true });
         });
         
-        // Window focus
         window.addEventListener('focus', () => {
-            if (currentUser) {
-                console.log('🎯 Window focused - marking online');
-                this.setOnline();
-            }
+            if (currentUser) this.setOnline();
         });
         
-        // Browser online/offline
         window.addEventListener('online', () => {
             console.log('🌐 Browser online - marking online');
-            if (currentUser) {
-                this.setOnline();
-            }
+            if (currentUser) this.setOnline();
         });
         
         window.addEventListener('offline', () => {
             console.log('🌐 Browser offline - marking offline');
-            if (currentUser) {
-                this.setOffline();
-            }
+            if (currentUser) this.setOffline();
         });
         
-        // Page unload
         window.addEventListener('beforeunload', () => {
             if (currentUser) {
                 console.log('🚪 Page unloading - marking offline');
@@ -4509,7 +4573,6 @@ const OnlineStatusManager = {
         console.log('✅ Online status event listeners setup complete');
     },
     
-    // Throttle function to prevent excessive calls
     throttle: function(func, limit) {
         let inThrottle;
         return function() {
@@ -4556,6 +4619,15 @@ window.handleSkillInputKeypress = function(event, type) {
         addSkillFromProfile(type);
     }
 };
+
+function someFunction(skill) {
+    if (!skill) {
+        console.warn('Skill parameter is required');
+        return;
+    }
+    console.log(skill.name);
+}
+
 function handlePageRefresh() {
     // Clear any pending form data
     if (window.performance && window.performance.navigation.type === 1) {
