@@ -23,8 +23,6 @@ console.log('EMAIL_USER:', process.env.EMAIL_USER ? 'Loaded' : 'Missing');
 console.log('================================');
 
 
-const path = require('path');
-
 // Serve static files from the current directory
 fastify.register(require('@fastify/static'), {
   root: path.join(__dirname),
