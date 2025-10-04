@@ -906,6 +906,107 @@ fastify.get('/api/users/verify', { preHandler: authenticate }, async (request, r
     }
 });
 
+// ✅ NOTIFICATION ROUTES
+
+// Get user notifications
+fastify.get('/api/notifications', { preHandler: authenticate }, async (request, reply) => {
+    try {
+        const { page = 1, limit = 20, unreadOnly = false, type = null } = request.query;
+        
+        const notifications = await Notification.getUserNotifications(
+            request.currentUser._id, 
+            { page: parseInt(page), limit: parseInt(limit), unreadOnly: unreadOnly === 'true', type }
+        );
+        
+        const unreadCount = await Notification.getUnreadCount(request.currentUser._id);
+        
+        return {
+            notifications,
+            unreadCount,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                hasMore: notifications.length === parseInt(limit)
+            }
+        };
+    } catch (error) {
+        console.error('Get notifications error:', error);
+        reply.status(500).send({ error: 'Failed to get notifications' });
+    }
+});
+
+// Mark notification as read
+fastify.patch('/api/notifications/:id/read', { preHandler: authenticate }, async (request, reply) => {
+    try {
+        const notification = await Notification.findOne({
+            _id: request.params.id,
+            user: request.currentUser._id
+        });
+        
+        if (!notification) {
+            return reply.status(404).send({ error: 'Notification not found' });
+        }
+        
+        await notification.markAsRead();
+        
+        return { message: 'Notification marked as read', notification };
+    } catch (error) {
+        console.error('Mark as read error:', error);
+        reply.status(500).send({ error: 'Failed to mark notification as read' });
+    }
+});
+
+// Mark all notifications as read
+fastify.patch('/api/notifications/read-all', { preHandler: authenticate }, async (request, reply) => {
+    try {
+        await Notification.updateMany(
+            { user: request.currentUser._id, isRead: false },
+            { $set: { isRead: true } }
+        );
+        
+        const unreadCount = await Notification.getUnreadCount(request.currentUser._id);
+        
+        return { 
+            message: 'All notifications marked as read',
+            unreadCount 
+        };
+    } catch (error) {
+        console.error('Mark all as read error:', error);
+        reply.status(500).send({ error: 'Failed to mark all notifications as read' });
+    }
+});
+
+// Archive notification
+fastify.patch('/api/notifications/:id/archive', { preHandler: authenticate }, async (request, reply) => {
+    try {
+        const notification = await Notification.findOne({
+            _id: request.params.id,
+            user: request.currentUser._id
+        });
+        
+        if (!notification) {
+            return reply.status(404).send({ error: 'Notification not found' });
+        }
+        
+        await notification.archive();
+        
+        return { message: 'Notification archived', notification };
+    } catch (error) {
+        console.error('Archive notification error:', error);
+        reply.status(500).send({ error: 'Failed to archive notification' });
+    }
+});
+
+// Get unread count
+fastify.get('/api/notifications/unread-count', { preHandler: authenticate }, async (request, reply) => {
+    try {
+        const count = await Notification.getUnreadCount(request.currentUser._id);
+        return { unreadCount: count };
+    } catch (error) {
+        console.error('Get unread count error:', error);
+        reply.status(500).send({ error: 'Failed to get unread count' });
+    }
+});
 // ✅ FIXED PROFILE UPDATE ROUTE - WORKING VERSION
 fastify.put('/api/users/profile', { preHandler: authenticate }, async (request, reply) => {
     try {
