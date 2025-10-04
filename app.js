@@ -644,10 +644,16 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
-// ✅ ENHANCED API FUNCTIONS
+// ✅ ENHANCED API FUNCTIONS WITH TIMEOUT
 async function apiRequest(endpoint, options = {}) {
     const url = `${API_BASE}${endpoint}`;
+    
+    // Add timeout to prevent hanging requests
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
     const config = {
+        signal: controller.signal,
         headers: {
             'Content-Type': 'application/json',
             ...options.headers
@@ -703,14 +709,19 @@ async function apiRequest(endpoint, options = {}) {
     } catch (error) {
         console.error(`❌ API Error: ${config.method || 'GET'} ${url}`, error);
         
-        if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-            NotificationManager.show('Cannot connect to server. Please check if the backend is running.', 'error');
+        if (error.name === 'AbortError') {
+            NotificationManager.show('Request timeout. Please try again.', 'error');
+        } else if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+            NotificationManager.show('Cannot connect to server. Please check your internet connection.', 'error');
         } else {
             NotificationManager.show(error.message, 'error');
         }
         
         throw error;
+    } finally {
+        clearTimeout(timeoutId);
     }
+}
 }
 // ✅ ENHANCED ACTIVITY TRACKING SYSTEM
 const ActivityTracker = {
@@ -904,24 +915,6 @@ const ActivityTracker = {
 
 // ✅ AUTO-SESSION TRACKING
 let sessionInterval;
-
-function startAutoSessionTracking() {
-    // Start initial session
-    ActivityTracker.startSession();
-    
-    // Update session every minute
-    sessionInterval = setInterval(() => {
-        ActivityTracker.endSession();
-        ActivityTracker.startSession();
-    }, 60000); // 1 minute
-}
-
-function stopAutoSessionTracking() {
-    if (sessionInterval) {
-        clearInterval(sessionInterval);
-        ActivityTracker.endSession();
-    }
-}
 
 // ✅ ENHANCED DASHBOARD BUTTON HANDLERS
 function setupDashboardQuickActions() {
@@ -2495,15 +2488,42 @@ function safeModalHide() {
     }
 }
 
+function safeModalHide(modalId) {
+    try {
+        const modalElement = document.getElementById(modalId);
+        if (modalElement) {
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            if (modal) {
+                modal.hide();
+            } else {
+                modalElement.style.display = 'none';
+                document.body.classList.remove('modal-open');
+                const backdrop = document.querySelector('.modal-backdrop');
+                if (backdrop) backdrop.remove();
+            }
+        }
+    } catch (error) {
+        console.error('Error hiding modal:', error);
+    }
+}
+
+// Safe section navigation
 function safeShowSection(sectionName) {
     try {
         showSection(sectionName);
     } catch (error) {
         console.error('Error showing section:', error);
-        // Fallback: reload the page
-        window.location.href = window.location.origin + window.location.pathname;
+        // Fallback to landing page
+        const landingSection = document.getElementById('landing-page');
+        if (landingSection) {
+            document.querySelectorAll('[id$="-section"], [id$="-page"]').forEach(el => {
+                el.classList.add('d-none');
+            });
+            landingSection.classList.remove('d-none');
+        }
     }
 }
+
 
 // ✅ ENHANCED RESET GET STARTED MODAL
 function resetGetStartedModal() {
@@ -2560,6 +2580,34 @@ function setupModalEventListeners() {
             // Ensure modal is properly reset when opened
             resetGetStartedModal();
         });
+    }
+}
+
+function startAutoSessionTracking() {
+    if (!currentUser) return;
+    
+    // End any existing session first
+    stopAutoSessionTracking();
+    
+    // Start new session
+    ActivityTracker.startSession();
+    
+    // Update session every minute
+    sessionInterval = setInterval(() => {
+        if (currentUser) {
+            ActivityTracker.endSession();
+            ActivityTracker.startSession();
+        }
+    }, 60000);
+}
+
+function stopAutoSessionTracking() {
+    if (sessionInterval) {
+        clearInterval(sessionInterval);
+        sessionInterval = null;
+    }
+    if (currentUser) {
+        ActivityTracker.endSession();
     }
 }
 
