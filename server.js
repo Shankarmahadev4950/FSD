@@ -484,56 +484,30 @@ const authenticate = async (request, reply) => {
     }
 };
 
-// ✅ ENHANCED ONLINE ENDPOINT
-// ✅ ENHANCED ONLINE ENDPOINT WITH BETTER DEBUGGING
+// ✅ IMPROVED ONLINE STATUS WITH ACTIVITY TIMEOUT
 fastify.post('/api/users/online', { preHandler: authenticate }, async (request, reply) => {
     try {
-        console.log(`🔄 Marking user ${request.currentUser.email} as ONLINE`);
-        
-        // Use direct update with explicit field setting
         const user = await User.findByIdAndUpdate(
             request.currentUser._id,
             { 
-                $set: {
-                    isOnline: true, // CRITICAL: Explicitly set to true
-                    lastSeen: new Date(),
-                    lastActivity: new Date()
-                }
+                isOnline: true,
+                lastActivity: new Date(),
+                lastSeen: new Date()
             },
-            { 
-                new: true, // Return updated document
-                runValidators: true
-            }
+            { new: true }
         );
-        
-        if (!user) {
-            console.error('❌ User not found during online update');
-            return reply.status(404).send({ error: 'User not found' });
-        }
-        
-        console.log(`✅ User ${user.email} marked as ONLINE - isOnline: ${user.isOnline}`);
-        console.log('📊 User document after update:', {
-            isOnline: user.isOnline,
-            lastSeen: user.lastSeen,
-            lastActivity: user.lastActivity
-        });
         
         return { 
             success: true,
-            message: 'Online status updated', 
             isOnline: user.isOnline,
-            lastSeen: user.lastSeen,
-            debug: {
-                userId: user._id,
-                email: user.email,
-                updateTime: new Date()
-            }
+            lastActivity: user.lastActivity
         };
     } catch (error) {
-        console.error('❌ Online status update error:', error);
-        reply.status(500).send({ error: 'Failed to update online status: ' + error.message });
+        console.error('Online status error:', error);
+        reply.status(500).send({ error: 'Failed to update online status' });
     }
 });
+
 fastify.post('/api/users/offline', { preHandler: authenticate }, async (request, reply) => {
     try {
         console.log(`🔄 Marking user ${request.currentUser.email} as OFFLINE`);
@@ -563,6 +537,30 @@ fastify.post('/api/users/offline', { preHandler: authenticate }, async (request,
         reply.status(500).send({ error: 'Failed to update offline status' });
     }
 });
+
+// ✅ ADD ACTIVITY TIMEOUT CHECK
+setInterval(async () => {
+    try {
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+        
+        const inactiveUsers = await User.updateMany(
+            {
+                isOnline: true,
+                lastActivity: { $lt: fiveMinutesAgo }
+            },
+            {
+                isOnline: false,
+                lastSeen: new Date()
+            }
+        );
+        
+        if (inactiveUsers.modifiedCount > 0) {
+            console.log(`🔄 Auto-marked ${inactiveUsers.modifiedCount} inactive users as offline`);
+        }
+    } catch (error) {
+        console.error('Auto offline check error:', error);
+    }
+}, 60000); // Check every minute
 
 // ✅ ENHANCED HEARTBEAT ENDPOINT
 fastify.post('/api/users/heartbeat', { preHandler: authenticate }, async (request, reply) => {
