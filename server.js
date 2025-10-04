@@ -295,8 +295,8 @@ console.log('🔗 Attempting MongoDB connection...');
 console.log('📝 Connection URI:', mongoURI.replace(/\/\/([^:]+):([^@]+)@/, '//***:***@')); // Hide credentials
 
 const mongooseOptions = {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
+    //useNewUrlParser: true,
+    //useUnifiedTopology: true,
     serverSelectionTimeoutMS: 10000, // 10 seconds
     socketTimeoutMS: 45000,
     retryWrites: true,
