@@ -3620,10 +3620,36 @@ function getUserInitials(name) {
 // ✅ OPEN SKILL DETAILS AND MESSAGING UI
 function openSkillDetails(skillId) {
     const skill = filteredSkills.find(s => s.id === skillId);
-    if (!skill) return;
-    
+    if (!skill) {
+        console.error('Skill not found:', skillId);
+        return;
+    }
     showMessagingUI(skill);
 }
+function showMessagingUI(skill) {
+    currentChatSkill = skill;
+    
+    // Update modal with user details
+    document.getElementById('message-user-name').textContent = skill.providerName;
+    document.getElementById('message-user-skill').textContent = skill.name;
+    
+    // Load existing messages
+    loadMessages(skill.id);
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('messagingModal'));
+    modal.show();
+}
+
+function shouldShowNewUserBadge(user) {
+    const joinDate = new Date(user.createdAt || user.joinDate);
+    const daysSinceJoin = (new Date() - joinDate) / (1000 * 60 * 60 * 24);
+    return daysSinceJoin < 7; // New if joined less than 7 days ago
+}
+
+// Add to skill card rendering:
+const isNewUser = shouldShowNewUserBadge(skill.provider);
+const newUserBadge = isNewUser ? '<span class="badge bg-info">New User</span>' : '';
 function populateCategories() {
     const categoryFilter = document.getElementById('category-filter');
     if (!categoryFilter) return;
@@ -3633,6 +3659,17 @@ function populateCategories() {
         categories.map(category => `<option value="${category}">${category}</option>`).join('');
 }
 
+// ✅ SORT USERS BY ONLINE STATUS & LAST SEEN
+function sortUsersByOnlineStatus(users) {
+    return users.sort((a, b) => {
+        // Online users first
+        if (a.isOnline && !b.isOnline) return -1;
+        if (!a.isOnline && b.isOnline) return 1;
+        
+        // Then by last activity time (most recent first)
+        return new Date(b.lastActivity) - new Date(a.lastActivity);
+    });
+}
 function populateTestimonials() {
     const testimonialsContainer = document.getElementById('testimonials-container');
     if (!testimonialsContainer) return;
