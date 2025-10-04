@@ -13,8 +13,7 @@ const fastifyStatic = require('@fastify/static');
 const mongoose = require('mongoose');
 // ✅ ACCURATE ONLINE STATUS TRACKING
 const activeConnections = new Map();
-const WebSocket = require('ws');
-const wss = new WebSocket.Server({ port: 5001 });
+
 
 // ✅ ADD DEBUG LOGS TO CHECK ENV VARIABLES
 console.log('=== LocalLink Server Starting ===');
@@ -82,6 +81,8 @@ fastify.post('/api/users/activity', { preHandler: authenticate }, async (request
     }
 });
 
+const WebSocket = require('ws');
+const wss = new WebSocket.Server({ port: 5001 });
 wss.on('connection', (ws) => {
     ws.on('message', (message) => {
         const data = JSON.parse(message);
@@ -102,6 +103,52 @@ wss.on('connection', (ws) => {
         }
     });
 });
+// ✅ ADD ERROR HANDLING TO WEBSOCKET (replace lines 45-70)
+if (wss) {
+    wss.on('connection', (ws) => {
+        console.log('🔗 New WebSocket connection');
+        
+        ws.on('message', (message) => {
+            try {
+                const data = JSON.parse(message);
+                
+                if (data.type === 'register') {
+                    // Register user connection
+                    activeConnections.set(data.userId, ws);
+                    console.log(`✅ WebSocket registered for user: ${data.userId}`);
+                }
+                
+                if (data.type === 'send_message') {
+                    // Deliver message or queue if offline
+                    deliverMessage(data);
+                }
+                
+                if (data.type === 'exchange_request') {
+                    // Notify recipient of exchange request
+                    notifyExchangeRequest(data);
+                }
+            } catch (error) {
+                console.error('WebSocket message error:', error);
+            }
+        });
+        
+        ws.on('error', (error) => {
+            console.error('WebSocket error:', error);
+        });
+        
+        ws.on('close', () => {
+            console.log('🔌 WebSocket connection closed');
+            // Remove from active connections
+            for (let [userId, connection] of activeConnections.entries()) {
+                if (connection === ws) {
+                    activeConnections.delete(userId);
+                    console.log(`✅ Removed WebSocket for user: ${userId}`);
+                    break;
+                }
+            }
+        });
+    });
+}
 
 // ✅ DYNAMIC RATINGS FROM FEEDBACK
 fastify.get('/api/users/:userId/rating', async (request, reply) => {
@@ -1260,9 +1307,9 @@ fastify.post('/api/messages/send', { preHandler: authenticate }, async (request,
         await message.populate('sender', 'name profilePicture');
         await message.populate('receiver', 'name profilePicture');
         
-        return {
-            message: 'Message sent successfully!',
-            message: {
+       return {
+            message: 'Message sent successfully!', // ✅ This is correct
+            messageData: { // ✅ Changed from 'message' to 'messageData'
                 id: message._id,
                 content: message.content,
                 senderId: message.sender._id,
@@ -1467,17 +1514,33 @@ fastify.post('/api/users/reset-password', async (request, reply) => {
 });
 
 // Start the server
+// ✅ ENHANCED SERVER STARTUP (replace lines 1140-1165)
 const start = async () => {
     try {
         const port = process.env.PORT || 5000;
         
         // Check MongoDB connection status
-        if (mongoose.connection.readyState === 1) {
-            console.log('✅ MongoDB Atlas connected successfully');
-        } else {
+        if (mongoose.connection.readyState !== 1) {
             console.log('⏳ Waiting for MongoDB connection...');
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Wait for connection with timeout
+            await new Promise((resolve, reject) => {
+                const timeout = setTimeout(() => {
+                    reject(new Error('MongoDB connection timeout'));
+                }, 10000);
+                
+                mongoose.connection.once('connected', () => {
+                    clearTimeout(timeout);
+                    resolve();
+                });
+                
+                mongoose.connection.once('error', (err) => {
+                    clearTimeout(timeout);
+                    reject(err);
+                });
+            });
         }
+        
+        console.log('✅ MongoDB Atlas connected successfully');
         
         await fastify.listen({ port, host: '0.0.0.0' });
         console.log('\n🎉 =================================');
