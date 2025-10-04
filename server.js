@@ -1318,6 +1318,205 @@ fastify.post('/api/skills', { preHandler: authenticate }, async (request, reply)
         reply.status(500).send({ error: 'Failed to create skill: ' + error.message });
     }
 });
+
+// ✅ SESSION ROUTES
+
+// Create session from exchange
+fastify.post('/api/sessions/create-from-exchange', { preHandler: authenticate }, async (request, reply) => {
+    try {
+        const { exchangeId, scheduledStart, scheduledDuration } = request.body;
+        
+        const exchange = await Exchange.findById(exchangeId)
+            .populate('skill')
+            .populate('provider')
+            .populate('learner');
+            
+        if (!exchange) {
+            return reply.status(404).send({ error: 'Exchange not found' });
+        }
+        
+        // Check if user is part of the exchange
+        const isParticipant = [exchange.provider._id.toString(), exchange.learner._id.toString()]
+            .includes(request.currentUser._id.toString());
+            
+        if (!isParticipant) {
+            return reply.status(403).send({ error: 'Not authorized to create session for this exchange' });
+        }
+        
+        // Check for scheduling conflicts
+        const hasConflict = await Session.hasSchedulingConflict(
+            exchange.provider._id, 
+            new Date(scheduledStart), 
+            scheduledDuration
+        ) || await Session.hasSchedulingConflict(
+            exchange.learner._id, 
+            new Date(scheduledStart), 
+            scheduledDuration
+        );
+        
+        if (hasConflict) {
+            return reply.status(400).send({ error: 'Scheduling conflict detected' });
+        }
+        
+        const session = await Session.createFromExchange(
+            exchange, 
+            new Date(scheduledStart), 
+            scheduledDuration
+        );
+        
+        return {
+            message: 'Session created successfully',
+            session
+        };
+    } catch (error) {
+        console.error('Create session error:', error);
+        reply.status(500).send({ error: 'Failed to create session' });
+    }
+});
+
+// Get user sessions
+fastify.get('/api/sessions', { preHandler: authenticate }, async (request, reply) => {
+    try {
+        const { 
+            status, 
+            role, 
+            upcoming, 
+            page = 1, 
+            limit = 20 
+        } = request.query;
+        
+        const sessions = await Session.findUserSessions(request.currentUser._id, {
+            status,
+            role,
+            upcoming: upcoming === 'true',
+            page: parseInt(page),
+            limit: parseInt(limit)
+        });
+        
+        return {
+            sessions,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                hasMore: sessions.length === parseInt(limit)
+            }
+        };
+    } catch (error) {
+        console.error('Get sessions error:', error);
+        reply.status(500).send({ error: 'Failed to get sessions' });
+    }
+});
+
+// Get session by ID
+fastify.get('/api/sessions/:id', { preHandler: authenticate }, async (request, reply) => {
+    try {
+        const session = await Session.findById(request.params.id)
+            .populate('participants.user', 'name email profilePicture location')
+            .populate('skill', 'name category description')
+            .populate('exchange')
+            .populate('materials.uploadedBy', 'name');
+            
+        if (!session) {
+            return reply.status(404).send({ error: 'Session not found' });
+        }
+        
+        // Check if user is a participant
+        const isParticipant = session.participants.some(
+            p => p.user._id.toString() === request.currentUser._id.toString()
+        );
+        
+        if (!isParticipant) {
+            return reply.status(403).send({ error: 'Not authorized to view this session' });
+        }
+        
+        return { session };
+    } catch (error) {
+        console.error('Get session error:', error);
+        reply.status(500).send({ error: 'Failed to get session' });
+    }
+});
+
+// Start session
+fastify.patch('/api/sessions/:id/start', { preHandler: authenticate }, async (request, reply) => {
+    try {
+        const session = await Session.findById(request.params.id);
+        
+        if (!session) {
+            return reply.status(404).send({ error: 'Session not found' });
+        }
+        
+        // Check if user is the teacher
+        const isTeacher = session.participants.some(
+            p => p.user.toString() === request.currentUser._id.toString() && p.role === 'teacher'
+        );
+        
+        if (!isTeacher) {
+            return reply.status(403).send({ error: 'Only the teacher can start the session' });
+        }
+        
+        await session.startSession();
+        
+        return { 
+            message: 'Session started successfully',
+            session 
+        };
+    } catch (error) {
+        console.error('Start session error:', error);
+        reply.status(500).send({ error: 'Failed to start session: ' + error.message });
+    }
+});
+
+// End session
+fastify.patch('/api/sessions/:id/end', { preHandler: authenticate }, async (request, reply) => {
+    try {
+        const session = await Session.findById(request.params.id);
+        
+        if (!session) {
+            return reply.status(404).send({ error: 'Session not found' });
+        }
+        
+        // Check if user is the teacher
+        const isTeacher = session.participants.some(
+            p => p.user.toString() === request.currentUser._id.toString() && p.role === 'teacher'
+        );
+        
+        if (!isTeacher) {
+            return reply.status(403).send({ error: 'Only the teacher can end the session' });
+        }
+        
+        await session.endSession();
+        
+        return { 
+            message: 'Session ended successfully',
+            session 
+        };
+    } catch (error) {
+        console.error('End session error:', error);
+        reply.status(500).send({ error: 'Failed to end session: ' + error.message });
+    }
+});
+
+// Accept session invitation
+fastify.patch('/api/sessions/:id/accept', { preHandler: authenticate }, async (request, reply) => {
+    try {
+        const session = await Session.findById(request.params.id);
+        
+        if (!session) {
+            return reply.status(404).send({ error: 'Session not found' });
+        }
+        
+        await session.acceptInvitation(request.currentUser._id);
+        
+        return { 
+            message: 'Session invitation accepted',
+            session 
+        };
+    } catch (error) {
+        console.error('Accept session error:', error);
+        reply.status(500).send({ error: 'Failed to accept session: ' + error.message });
+    }
+});
+
 // ✅ EXCHANGE ROUTES
 fastify.post('/api/exchanges/request', { preHandler: authenticate }, async (request, reply) => {
     try {
