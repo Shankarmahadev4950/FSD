@@ -23,13 +23,19 @@ console.log('EMAIL_USER:', process.env.EMAIL_USER ? 'Loaded' : 'Missing');
 console.log('================================');
 
 
-//fastify.register(fastifyStatic, {
- // root: path.join(__dirname),
- // prefix: '/',
-//});
-//fastify.get('*', function (request, reply) {
- // reply.sendFile('index.html');
-//});
+const path = require('path');
+
+// Serve static files from the current directory
+fastify.register(require('@fastify/static'), {
+  root: path.join(__dirname),
+  prefix: '/',
+});
+
+// Serve the main HTML file for all routes (SPA support)
+fastify.get('*', function (request, reply) {
+  reply.sendFile('index.html');
+});
+
 const authenticate = async (request, reply) => {
     try {
         await request.jwtVerify();
@@ -366,7 +372,7 @@ fastify.post('/api/auth/reset-password', async (request, reply) => {
 // ✅ FIXED CORS CONFIGURATION - IMPROVED CORS HANDLING
 fastify.register(require('@fastify/cors'), {
     origin: [
-        //'https://your-app-name.onrender.com',
+        'https://fsd-locallink.onrender.com',
         'http://localhost:5500',
         'http://127.0.0.1:5500', 
         'http://localhost:8000',
@@ -903,8 +909,17 @@ fastify.get('/api/users/verify', { preHandler: authenticate }, async (request, r
     }
 });
 
-// ✅ NOTIFICATION ROUTES
 
+// Simple root endpoint to verify server is running
+fastify.get('/', async (request, reply) => {
+  return { 
+    message: 'LocalLink Server is running!',
+    timestamp: new Date().toISOString(),
+    version: '1.0.0'
+  };
+});
+
+// ✅ NOTIFICATION ROUTES
 // Get user notifications
 fastify.get('/api/notifications', { preHandler: authenticate }, async (request, reply) => {
     try {
