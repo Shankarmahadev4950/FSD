@@ -352,12 +352,14 @@ mongoose.connection.on('reconnected', () => {
 // ✅ IMPORT MODELS WITH ERROR HANDLING
 let User, Skill, Exchange, Feedback, Message;
 try {
-    User = require('./models/User');
-    Skill = require('./models/Skill');
-    Exchange = require('./models/Exchange');
-    Feedback = require('./models/Feedback');
-    Message = require('./models/Message');
-    console.log('✅ All models loaded successfully');
+  User = require('./User');
+  Skill = require('./Skill');
+  Exchange = require('./Exchange');
+  Feedback = require('./Feedback');
+  Message = require('./Message');
+  console.log('All models loaded successfully');
+}
+
 } catch (error) {
     console.error('❌ Error loading models:', error.message);
     process.exit(1);
