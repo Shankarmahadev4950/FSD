@@ -730,6 +730,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 // ✅ ENHANCED API FUNCTIONS WITH TIMEOUT
+// ✅ ENHANCED API FUNCTIONS WITH TIMEOUT AND AD BLOCKER HANDLING
 async function apiRequest(endpoint, options = {}) {
     const url = `${API_BASE}${endpoint}`;
     
@@ -797,7 +798,14 @@ async function apiRequest(endpoint, options = {}) {
         if (error.name === 'AbortError') {
             NotificationManager.show('Request timeout. Please try again.', 'error');
         } else if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-            NotificationManager.show('Cannot connect to server. Please check your internet connection.', 'error');
+            // Check if this might be an ad blocker issue
+            const isLikelyAdBlocker = url.includes('localhost') || url.includes('127.0.0.1');
+            if (isLikelyAdBlocker) {
+                console.warn('⚠️ Request blocked - this might be due to an ad blocker or CORS issue');
+                NotificationManager.show('Cannot connect to server. Please check if the server is running and try disabling ad blockers for this site.', 'error');
+            } else {
+                NotificationManager.show('Cannot connect to server. Please check your internet connection.', 'error');
+            }
         } else {
             NotificationManager.show(error.message, 'error');
         }
@@ -2332,16 +2340,25 @@ function addSkillSearch(container, mode) {
 }
 
 // ✅ COMPLETE SAFE SKILL HANDLER
+// ✅ COMPLETE SAFE SKILL HANDLER - FIXED VERSION
 function handleSkillReference(skill) {
     // Validate skill parameter
-    if (typeof skill === 'undefined') {
-        console.error('❌ Skill parameter is undefined');
-        return null;
-    }
-    
-    if (!skill) {
-        console.warn('⚠️ Skill is null or empty');
-        return null;
+    if (typeof skill === 'undefined' || skill === null) {
+        console.error('❌ Skill parameter is undefined or null');
+        return {
+            id: 'unknown',
+            name: 'Unnamed Skill',
+            category: 'General',
+            description: 'No description available',
+            providerName: 'Unknown User',
+            providerId: null,
+            timeRequired: 1,
+            location: 'Location not specified',
+            rating: 0,
+            isActive: true,
+            providerOnline: false,
+            providerLastSeen: new Date().toISOString()
+        };
     }
     
     // Ensure skill has required properties with fallbacks
@@ -4256,160 +4273,6 @@ function clearFilters() {
 // Update the clearSearch function to use clearFilters
 window.clearSearch = clearFilters;
 
-// ✅ HELPER FUNCTIONS FOR UI
-function formatDate(dateString) {
-    const options = { year: 'numeric', month: 'short', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString(undefined, options);
-}
-
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-// ✅ INITIALIZATION HELPERS
-function setupSearchListeners() {
-    const searchInput = document.getElementById('skill-search');
-    const categoryFilter = document.getElementById('category-filter');
-    
-    if (searchInput) {
-        searchInput.addEventListener('input', debounce(searchSkills, 300));
-    }
-    
-    if (categoryFilter) {
-        categoryFilter.addEventListener('change', searchSkills);
-    }
-}
-
-async function initializeApp() {
-    console.log('🚀 Initializing LocalLink app...');
-    
-    try {
-        // Setup navigation and event listeners first
-        setupNavigationHandlers();
-        setupEventListeners();
-        updateNavigationBadges();
-        handlePageRefresh();
-        
-        // Initialize Online Status Manager EARLY
-        OnlineStatusManager.init();
-        
-        // Check backend connection
-        try {
-            const response = await fetch(`${API_BASE}/health`);
-            if (response.ok) {
-                console.log('✅ Backend server is reachable');
-            } else {
-                console.warn('⚠️ Backend server responded with non-OK status');
-            }
-        } catch (error) {
-            console.error('❌ Backend server is not reachable:', error.message);
-            NotificationManager.show('Backend server is not running. Please start the server.', 'error');
-        }
-        
-        // Check existing session
-        await checkExistingSession();
-        
-        // Initialize activity tracking and online status if user is logged in
-        if (currentUser) {
-            ActivityTracker.initUserActivity();
-            startAutoSessionTracking();
-            
-            // ✅ CRITICAL: Mark user as online immediately after login
-            await OnlineStatusManager.setOnline();
-            console.log('✅ User marked as online after login');
-        }
-        
-        // Show appropriate section based on authentication
-        if (currentUser) {
-            showSection('dashboard');
-        } else {
-            showSection('landing');
-        }
-        
-        // ✅ NEW: INITIALIZE VIDEO CALL SYSTEM
-        initializeVideoCallSystem();
-        
-        // Initialize all app components
-        populateTestimonials();
-        populateCategories();
-        animateCounters();
-        await loadSkills();
-        initializeSkillManagement();
-        setupSearchListeners();
-        
-        console.log('✅ LocalLink app initialized successfully');
-        
-    } catch (error) {
-        console.error('❌ App initialization failed:', error);
-        NotificationManager.show('Failed to initialize application', 'error');
-    }
-}
-
-if (typeof videoCallManager === 'undefined') {
-    var videoCallManager = {
-        initializeSocket: function(socket) {
-            console.log('🎥 VideoCallManager placeholder - socket initialized');
-        },
-        startCall: function(skillId, recipientId, recipientName) {
-            console.log('🎬 Starting video call to:', recipientName);
-            NotificationManager.show('Video call system is not fully loaded. Please refresh the page.', 'warning');
-        },
-        isCallActive: false,
-        socket: null
-    };
-}
-
-function initializeVideoCallSystem() {
-    console.log('🎥 Initializing video call system...');
-    
-    // Check if videoCallManager exists (videocall.js loaded)
-    if (typeof videoCallManager === 'undefined') {
-        console.warn('⚠️ VideoCallManager not loaded - make sure videocall.js is included in HTML');
-        return;
-    }
-    
-    // Strategy 1: If WebSocket is already available, initialize immediately
-    if (typeof socket !== 'undefined' && socket.readyState === WebSocket.OPEN) {
-        console.log('✅ WebSocket already connected - initializing video calls');
-        videoCallManager.initializeSocket(socket);
-        return;
-    }
-    
-    // Strategy 2: Set up a listener for future WebSocket connections
-    console.log('⏳ WebSocket not ready yet, setting up connection listener...');
-    
-    // Listen for custom event when WebSocket connects
-    window.addEventListener('websocketConnected', function(event) {
-        console.log('✅ WebSocket connected event received - initializing video calls');
-        videoCallManager.initializeSocket(event.detail.socket);
-    });
-    
-    // Strategy 3: Periodic check for WebSocket connection (fallback)
-    const videoCallInitInterval = setInterval(() => {
-        if (typeof socket !== 'undefined' && socket.readyState === WebSocket.OPEN) {
-            console.log('✅ WebSocket now connected - initializing video calls');
-            videoCallManager.initializeSocket(socket);
-            clearInterval(videoCallInitInterval);
-        }
-    }, 1000);
-    
-    // Clear interval after 15 seconds if still not connected
-    setTimeout(() => {
-        clearInterval(videoCallInitInterval);
-        if (!videoCallManager.socket) {
-            console.warn('⚠️ Video call system: WebSocket not available after timeout');
-        }
-    }, 15000);
-}
-
 // ✅ COMPLETE ONLINE STATUS MANAGER
 const OnlineStatusManager = {
     heartbeatInterval: null,
@@ -4586,6 +4449,191 @@ const OnlineStatusManager = {
         }
     }
 };
+// ✅ HELPER FUNCTIONS FOR UI
+function formatDate(dateString) {
+    const options = { year: 'numeric', month: 'short', day: 'numeric' };
+    return new Date(dateString).toLocaleDateString(undefined, options);
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// ✅ INITIALIZATION HELPERS
+function setupSearchListeners() {
+    const searchInput = document.getElementById('skill-search');
+    const categoryFilter = document.getElementById('category-filter');
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', debounce(searchSkills, 300));
+    }
+    
+    if (categoryFilter) {
+        categoryFilter.addEventListener('change', searchSkills);
+    }
+}
+
+async function initializeApp() {
+    console.log('🚀 Initializing LocalLink app...');
+    
+    try {
+        // Setup navigation and event listeners first
+        setupNavigationHandlers();
+        setupEventListeners();
+        updateNavigationBadges();
+        handlePageRefresh();
+        
+        // Initialize Online Status Manager with error handling
+        try {
+            OnlineStatusManager.init();
+        } catch (error) {
+            console.warn('⚠️ OnlineStatusManager initialization warning:', error.message);
+        }
+        
+        // Check backend connection with better error handling
+        try {
+            const response = await fetch(`${API_BASE}/health`, { 
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            if (response.ok) {
+                console.log('✅ Backend server is reachable');
+            } else {
+                console.warn('⚠️ Backend server responded with non-OK status');
+            }
+        } catch (error) {
+            console.error('❌ Backend server is not reachable:', error.message);
+            // Don't show notification if it's likely an ad blocker
+            if (!error.message.includes('Failed to fetch') && !error.message.includes('blocked')) {
+                NotificationManager.show('Backend server is not running. Please start the server.', 'error');
+            }
+        }
+        
+        // Check existing session
+        await checkExistingSession();
+        
+        // Initialize activity tracking and online status if user is logged in
+        if (currentUser) {
+            try {
+                ActivityTracker.initUserActivity();
+                startAutoSessionTracking();
+                
+                // ✅ CRITICAL: Mark user as online immediately after login
+                await OnlineStatusManager.setOnline();
+                console.log('✅ User marked as online after login');
+            } catch (error) {
+                console.warn('⚠️ Activity tracking initialization warning:', error.message);
+            }
+        }
+        
+        // Show appropriate section based on authentication
+        if (currentUser) {
+            showSection('dashboard');
+        } else {
+            showSection('landing');
+        }
+        
+        // ✅ NEW: INITIALIZE VIDEO CALL SYSTEM
+        try {
+            initializeVideoCallSystem();
+        } catch (error) {
+            console.warn('⚠️ Video call system initialization warning:', error.message);
+        }
+        
+        // Initialize all app components
+        populateTestimonials();
+        populateCategories();
+        animateCounters();
+        
+        try {
+            await loadSkills();
+        } catch (error) {
+            console.warn('⚠️ Skills loading warning:', error.message);
+        }
+        
+        initializeSkillManagement();
+        setupSearchListeners();
+        
+        console.log('✅ LocalLink app initialized successfully');
+        
+    } catch (error) {
+        console.error('❌ App initialization failed:', error);
+        // Don't show notification for common ad blocker issues
+        if (!error.message.includes('Failed to fetch') && !error.message.includes('blocked')) {
+            NotificationManager.show('Failed to initialize application', 'error');
+        }
+        
+        // Still show the landing page even if initialization partially failed
+        showSection('landing');
+    }
+}
+// ✅ VIDEO CALL MANAGER PLACEHOLDER - Ensure this exists
+if (typeof videoCallManager === 'undefined') {
+    var videoCallManager = {
+        initializeSocket: function(socket) {
+            console.log('🎥 VideoCallManager placeholder - socket initialized');
+        },
+        startCall: function(skillId, recipientId, recipientName) {
+            console.log('🎬 Starting video call to:', recipientName);
+            NotificationManager.show('Video call system is not fully loaded. Please refresh the page.', 'warning');
+        },
+        isCallActive: false,
+        socket: null
+    };
+}
+
+function initializeVideoCallSystem() {
+    console.log('🎥 Initializing video call system...');
+    
+    // Check if videoCallManager exists (videocall.js loaded)
+    if (typeof videoCallManager === 'undefined') {
+        console.warn('⚠️ VideoCallManager not loaded - make sure videocall.js is included in HTML');
+        return;
+    }
+    
+    // Strategy 1: If WebSocket is already available, initialize immediately
+    if (typeof socket !== 'undefined' && socket.readyState === WebSocket.OPEN) {
+        console.log('✅ WebSocket already connected - initializing video calls');
+        videoCallManager.initializeSocket(socket);
+        return;
+    }
+    
+    // Strategy 2: Set up a listener for future WebSocket connections
+    console.log('⏳ WebSocket not ready yet, setting up connection listener...');
+    
+    // Listen for custom event when WebSocket connects
+    window.addEventListener('websocketConnected', function(event) {
+        console.log('✅ WebSocket connected event received - initializing video calls');
+        videoCallManager.initializeSocket(event.detail.socket);
+    });
+    
+    // Strategy 3: Periodic check for WebSocket connection (fallback)
+    const videoCallInitInterval = setInterval(() => {
+        if (typeof socket !== 'undefined' && socket.readyState === WebSocket.OPEN) {
+            console.log('✅ WebSocket now connected - initializing video calls');
+            videoCallManager.initializeSocket(socket);
+            clearInterval(videoCallInitInterval);
+        }
+    }, 1000);
+    
+    // Clear interval after 15 seconds if still not connected
+    setTimeout(() => {
+        clearInterval(videoCallInitInterval);
+        if (!videoCallManager.socket) {
+            console.warn('⚠️ Video call system: WebSocket not available after timeout');
+        }
+    }, 15000);
+}
 // ✅ ADD VISIBILITY CHANGE HANDLER
 document.addEventListener('visibilitychange', function() {
     if (currentUser) {
