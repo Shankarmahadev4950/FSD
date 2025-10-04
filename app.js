@@ -3521,6 +3521,23 @@ function loadSkillsMarketplace() {
     populateSkillsGrid(filteredSkills);
     populateCategories();
 }
+// ✅ BASIC REAL-TIME MESSAGING WITH POLLING
+function startMessagePolling(skillId) {
+    if (messageInterval) clearInterval(messageInterval);
+    
+    messageInterval = setInterval(async () => {
+        if (currentChatSkill && currentChatSkill.id === skillId) {
+            await loadMessages(skillId);
+        }
+    }, 3000); // Poll every 3 seconds
+}
+
+function stopMessagePolling() {
+    if (messageInterval) {
+        clearInterval(messageInterval);
+        messageInterval = null;
+    }
+}
 
 function populateSkillsGrid(skills) {
     const skillsGrid = document.getElementById('skills-grid');
@@ -3542,21 +3559,30 @@ function populateSkillsGrid(skills) {
     }
 
     skillsGrid.innerHTML = skills.map(skill => {
-        const isOnline = skill.providerOnline || false;
-        const lastSeen = skill.providerLastSeen || new Date();
+        // Safe data access with fallbacks
+        const skillName = skill.name || 'Unnamed Skill';
+        const providerName = skill.providerName || skill.provider?.name || 'Unknown User';
+        const category = skill.category || 'General';
+        const description = skill.description || 'No description available';
+        const location = skill.location || 'Location not specified';
+        const timeRequired = skill.timeRequired || skill.price || 1;
+        const rating = skill.rating || 4.5;
+        
+        const isOnline = skill.providerOnline || skill.provider?.isOnline || false;
+        const lastSeen = skill.providerLastSeen || skill.provider?.lastSeen || new Date();
         const lastActivity = skill.lastActivity || lastSeen;
         
         const statusBadge = OnlineStatusManager.getStatusBadge(isOnline, lastSeen, lastActivity);
         
         return `
         <div class="col-md-6 col-lg-4 mb-4">
-            <div class="card h-100 skill-card" style="cursor: pointer;" onclick="openSkillDetails(${skill.id})">
+            <div class="card h-100 skill-card" style="cursor: pointer;" onclick="openSkillDetails('${skill.id}')">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h5 class="card-title">${skill.name}</h5>
-                        <span class="badge bg-secondary">${skill.category}</span>
+                        <h5 class="card-title">${skillName}</h5>
+                        <span class="badge bg-secondary">${category}</span>
                     </div>
-                    <p class="card-text text-muted small">${skill.description}</p>
+                    <p class="card-text text-muted small">${description}</p>
                     
                     <!-- User Profile Section with Enhanced Online Status -->
                     <div class="user-profile-section mb-3 p-3 bg-light rounded">
@@ -3565,7 +3591,7 @@ function populateSkillsGrid(skills) {
                                 <div class="user-avatar me-3 position-relative">
                                     <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
                                          style="width: 40px; height: 40px; font-size: 14px;">
-                                        ${getUserInitials(skill.providerName)}
+                                        ${getUserInitials(providerName)}
                                     </div>
                                     <!-- Enhanced Online Status Indicator -->
                                     <div class="position-absolute bottom-0 end-0 ${isOnline ? 'bg-success' : 'bg-secondary'} rounded-circle border border-2 border-white status-indicator"
@@ -3574,9 +3600,9 @@ function populateSkillsGrid(skills) {
                                     </div>
                                 </div>
                                 <div class="user-info">
-                                    <h6 class="mb-1">${skill.providerName}</h6>
+                                    <h6 class="mb-1">${providerName}</h6>
                                     <small class="text-muted">
-                                        <i class="fas fa-map-marker-alt me-1"></i> ${skill.location}
+                                        <i class="fas fa-map-marker-alt me-1"></i> ${location}
                                     </small>
                                     <div class="status-text small mt-1">
                                         ${isOnline ? 
@@ -3592,17 +3618,17 @@ function populateSkillsGrid(skills) {
                     
                     <div class="skill-details">
                         <small class="text-muted">
-                            <i class="fas fa-clock me-1"></i> ${skill.timeRequired || skill.price} hour(s)
+                            <i class="fas fa-clock me-1"></i> ${timeRequired} hour(s)
                         </small>
                     </div>
                     <div class="d-flex justify-content-between align-items-center mt-3">
                         <div>
                             <small class="text-warning">
-                                ${'★'.repeat(Math.floor(skill.rating || 4.5))}${'☆'.repeat(5 - Math.floor(skill.rating || 4.5))}
-                                <span class="ms-1">${skill.rating || 4.5}</span>
+                                ${'★'.repeat(Math.floor(rating))}${'☆'.repeat(5 - Math.floor(rating))}
+                                <span class="ms-1">${rating}</span>
                             </small>
                         </div>
-                        <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); requestExchange(${skill.id})">
+                        <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); requestExchange('${skill.id}')">
                             ${isOnline ? 'Exchange Now' : 'Request'}
                         </button>
                     </div>
@@ -3612,7 +3638,6 @@ function populateSkillsGrid(skills) {
         `;
     }).join('');
 }
-
 // ✅ HELPER FUNCTION FOR USER INITIALS
 function getUserInitials(name) {
     if (!name) return 'U';
