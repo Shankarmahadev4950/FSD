@@ -24,15 +24,15 @@ console.log('================================');
 
 
 // Serve static files from the current directory
-fastify.register(require('@fastify/static'), {
-  root: path.join(__dirname),
-  prefix: '/',
-});
+//fastify.register(require('@fastify/static'), {
+  //root: path.join(__dirname),
+ // prefix: '/',
+//});
 
 // Serve the main HTML file for all routes (SPA support)
-fastify.get('*', function (request, reply) {
-  reply.sendFile('index.html');
-});
+//fastify.get('*', function (request, reply) {
+//  reply.sendFile('index.html');
+//});
 
 const authenticate = async (request, reply) => {
     try {
