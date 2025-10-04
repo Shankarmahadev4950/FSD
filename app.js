@@ -806,7 +806,6 @@ async function apiRequest(endpoint, options = {}) {
         clearTimeout(timeoutId);
     }
 }
-}
 // ✅ ENHANCED ACTIVITY TRACKING SYSTEM
 const ActivityTracker = {
     // Initialize user activity
