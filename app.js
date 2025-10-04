@@ -3617,30 +3617,73 @@ function getUserInitials(name) {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
 }
 
-// ✅ OPEN SKILL DETAILS AND MESSAGING UI
+// ✅ FIXED: User card click handler
 function openSkillDetails(skillId) {
-    const skill = filteredSkills.find(s => s.id === skillId);
+    console.log('Opening skill details for:', skillId);
+    
+    // Find skill by string ID comparison
+    const skill = filteredSkills.find(s => s.id.toString() === skillId.toString());
+    
     if (!skill) {
-        console.error('Skill not found:', skillId);
+        console.error('Skill not found for ID:', skillId);
+        console.log('Available skills:', filteredSkills.map(s => ({ id: s.id, name: s.name })));
+        NotificationManager.show('Skill not found. Please try again.', 'error');
         return;
     }
+    
+    console.log('Found skill:', skill);
+    
+    // Show messaging modal
     showMessagingUI(skill);
 }
-function showMessagingUI(skill) {
-    currentChatSkill = skill;
+
+// ✅ FIXED: User card click handler
+function openSkillDetails(skillId) {
+    console.log('Opening skill details for:', skillId);
     
-    // Update modal with user details
-    document.getElementById('message-user-name').textContent = skill.providerName;
-    document.getElementById('message-user-skill').textContent = skill.name;
+    // Find skill by string ID comparison
+    const skill = filteredSkills.find(s => s.id.toString() === skillId.toString());
     
-    // Load existing messages
-    loadMessages(skill.id);
+    if (!skill) {
+        console.error('Skill not found for ID:', skillId);
+        console.log('Available skills:', filteredSkills.map(s => ({ id: s.id, name: s.name })));
+        NotificationManager.show('Skill not found. Please try again.', 'error');
+        return;
+    }
     
-    // Show modal
-    const modal = new bootstrap.Modal(document.getElementById('messagingModal'));
-    modal.show();
+    console.log('Found skill:', skill);
+    
+    // Show messaging modal
+    showMessagingUI(skill);
 }
 
+// ✅ ENHANCED: Safe messaging UI
+function showMessagingUI(skill) {
+    try {
+        currentChatSkill = skill;
+        
+        // Update modal content safely
+        const userNameElement = document.getElementById('message-user-name');
+        const userSkillElement = document.getElementById('message-user-skill');
+        
+        if (userNameElement) userNameElement.textContent = skill.providerName || 'User';
+        if (userSkillElement) userSkillElement.textContent = skill.name || 'Skill';
+        
+        // Load messages
+        loadMessages(skill.id);
+        
+        // Show modal
+        const modalElement = document.getElementById('messagingModal');
+        if (modalElement) {
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
+        }
+        
+    } catch (error) {
+        console.error('Error showing messaging UI:', error);
+        NotificationManager.show('Failed to open chat. Please try again.', 'error');
+    }
+}
 function shouldShowNewUserBadge(user) {
     const joinDate = new Date(user.createdAt || user.joinDate);
     const daysSinceJoin = (new Date() - joinDate) / (1000 * 60 * 60 * 24);
