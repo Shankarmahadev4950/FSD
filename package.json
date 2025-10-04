@@ -10,7 +10,7 @@
   },
   "dependencies": {
      "ws": "^8.14.2",
-    "socket.io": "^4.7.4"
+    "socket.io": "^4.7.4",
     "fastify": "^4.28.1",
     "@fastify/static": "^7.0.3",
     "@fastify/cors": "^9.0.1",
