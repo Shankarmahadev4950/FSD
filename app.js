@@ -658,8 +658,6 @@ function connectWebSocket() {
     }
 }
 
-// ✅ SAFE VIDEO CALL BUTTON FUNCTION
-// ✅ ENHANCED VIDEO CALL BUTTON FUNCTION
 function startVideoCall(skillId, recipientId, recipientName) {
     console.log('🎬 Starting video call to:', recipientName);
     
@@ -670,23 +668,21 @@ function startVideoCall(skillId, recipientId, recipientName) {
         return;
     }
     
-    // Check if video call system is initialized
+    // Check if video call system is available
     if (typeof videoCallManager === 'undefined') {
         NotificationManager.show('Video call system is not available. Please refresh the page.', 'error');
         return;
     }
     
     // Check if WebSocket is connected
-    if (!videoCallManager.socket || videoCallManager.socket.readyState !== WebSocket.OPEN) {
-        NotificationManager.show('Video call connection is not ready. Please wait a moment and try again.', 'warning');
-        
-        // Try to reinitialize
+    if (!videoCallManager.socket) {
+        // Try to initialize with existing WebSocket
         if (typeof socket !== 'undefined' && socket.readyState === WebSocket.OPEN) {
             videoCallManager.initializeSocket(socket);
-            // Retry after a short delay
-            setTimeout(() => startVideoCall(skillId, recipientId, recipientName), 1000);
+        } else {
+            NotificationManager.show('Video call connection is not ready. Please wait a moment and try again.', 'warning');
+            return;
         }
-        return;
     }
     
     // Check if already in a call
@@ -4759,7 +4755,11 @@ async function initializeApp() {
         } catch (error) {
             console.warn('⚠️ OnlineStatusManager initialization warning:', error.message);
         }
-        
+         try {
+            initializeVideoCallSystem();
+        } catch (error) {
+            console.warn('⚠️ Video call system initialization warning:', error.message);
+        }
         // Check backend connection
         try {
             const response = await fetch(`${API_BASE}/health`, { 
@@ -4847,6 +4847,7 @@ if (typeof videoCallManager === 'undefined') {
     };
 }
 
+// ✅ VIDEO CALL SYSTEM INITIALIZATION
 function initializeVideoCallSystem() {
     console.log('🎥 Initializing video call system...');
     
@@ -4901,7 +4902,23 @@ document.addEventListener('visibilitychange', function() {
         }
     }
 });
-
+document.addEventListener('DOMContentLoaded', function() {
+    // Listen for WebSocket connection events for video calls
+    window.addEventListener('websocketConnected', function(event) {
+        console.log('✅ Global WebSocket connected - initializing video calls');
+        if (typeof videoCallManager !== 'undefined') {
+            videoCallManager.initializeSocket(event.detail.socket);
+        }
+    });
+    
+    // If socket is already available, initialize immediately
+    if (typeof socket !== 'undefined' && socket.readyState === WebSocket.OPEN) {
+        console.log('✅ Socket already connected - initializing video calls');
+        if (typeof videoCallManager !== 'undefined') {
+            videoCallManager.initializeSocket(socket);
+        }
+    }
+});
 // ✅ GLOBAL ERROR HANDLER
 window.addEventListener('error', function(e) {
     console.error('Global error:', e.error);
