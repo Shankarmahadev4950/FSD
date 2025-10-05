@@ -1113,62 +1113,67 @@ function renderCoursesCompleted(stats) {
 // ✅ TOGGLE ACTIVITY VIEW
 
 // ✅ ENHANCED SKILLS LOADING WITH ONLINE STATUS
+// ✅ ENHANCED SKILLS LOADING - WITH BETTER ERROR HANDLING
 async function loadSkills() {
     try {
         console.log('🔄 Loading skills from API...');
         const skills = await apiRequest('/skills');
         
-        // Filter only active skills that have providers
-        filteredSkills = skills.filter(skill => 
-            skill.isActive !== false && 
-            skill.providerName && 
-            skill.providerId !== currentUser?.id
-        );
+        // ✅ SAFE FILTERING WITH COMPREHENSIVE CHECKS
+        filteredSkills = skills.filter(skill => {
+            // Skip if skill is invalid
+            if (!skill) return false;
+            
+            // Skip if skill is not active
+            if (skill.isActive === false) return false;
+            
+            // Skip if no provider name
+            if (!skill.providerName && !skill.provider?.name) return false;
+            
+            // Skip user's own skills
+            if (currentUser && skill.providerId === currentUser.id) return false;
+            if (currentUser && skill.provider?._id === currentUser.id) return false;
+            
+            return true;
+        });
         
-        console.log(`✅ Loaded ${filteredSkills.length} skills from API`);
-        
-        // Count online users for notification badge
-        const onlineUsersCount = filteredSkills.filter(skill => 
-            skill.providerOnline === true
-        ).length;
-        
-        console.log(`👥 Online users: ${onlineUsersCount}`);
+        console.log(`✅ Loaded ${filteredSkills.length} skills after filtering`);
+
+        // Count online users
+        const onlineUsersCount = filteredSkills.filter(skill => {
+            return skill.providerOnline === true || skill.provider?.isOnline === true;
+        }).length;
         
         // Update notification badge with online users count
         NotificationManager.showOnlineUsersCount(onlineUsersCount);
         
-        // Always populate the skills grid when skills are loaded
         if (currentSection === 'skills') {
             populateSkillsGrid(filteredSkills);
         }
-        
     } catch (error) {
         console.error('❌ Failed to load skills from API:', error);
         
-        // Fallback to local data if API fails
-        console.log('🔄 Using fallback local data...');
-        filteredSkills = appData.availableSkills.filter(skill => 
-            skill.providerId !== currentUser?.id
-        );
+        // ✅ BETTER FALLBACK TO LOCAL DATA
+        console.log('🔄 Falling back to local skills data...');
+        filteredSkills = appData.availableSkills.filter(skill => {
+            if (!skill) return false;
+            if (currentUser && skill.providerId === currentUser.id) return false;
+            return true;
+        });
         
-        // Add mock online status to local data
-        filteredSkills = filteredSkills.map(skill => ({
-            ...skill,
-            providerOnline: Math.random() > 0.5, // Random online status for demo
-            providerLastSeen: new Date(Date.now() - Math.random() * 24 * 60 * 60 * 1000) // Random last seen
-        }));
-        
-        // Count online users from fallback data
+        // Still count online users from fallback data
         const onlineUsersCount = filteredSkills.filter(skill => 
             skill.providerOnline === true
         ).length;
         
         NotificationManager.showOnlineUsersCount(onlineUsersCount);
         
-        // Always populate the skills grid with fallback data
         if (currentSection === 'skills') {
             populateSkillsGrid(filteredSkills);
         }
+        
+        // Show user-friendly error message
+        NotificationManager.show('Using demo skills data. Server connection issue.', 'warning');
     }
 }
 // In app.js, change these:
@@ -3900,7 +3905,7 @@ function stopMessagePolling() {
 function populateSkillsGrid(skills) {
     const skillsGrid = document.getElementById('skills-grid');
     if (!skillsGrid) {
-        console.error('❌ Skills grid element not found');
+        console.error('Skills grid element not found');
         return;
     }
 
@@ -3919,103 +3924,143 @@ function populateSkillsGrid(skills) {
         return;
     }
 
+    console.log(`🔄 Rendering ${skills.length} skills in grid`);
+
     skillsGrid.innerHTML = skills.map(skill => {
-        try {
-            // ✅ SAFE DATA ACCESS WITH COMPREHENSIVE FALLBACKS
-            const skillId = skill.id || skill._id || 'unknown';
-            const skillName = skill.name || 'Unnamed Skill';
-            const providerName = skill.providerName || skill.provider?.name || 'Unknown User';
-            const category = skill.category || 'General';
-            const description = skill.description || 'No description available';
-            const location = skill.location || 'Location not specified';
-            const timeRequired = skill.timeRequired || 1;
-            const rating = skill.rating || 4.5;
-            
-            // ✅ SAFE ONLINE STATUS CHECKING
-            const isOnline = skill.providerOnline !== undefined ? skill.providerOnline : 
-                            (skill.provider?.isOnline || false);
-            const lastSeen = skill.providerLastSeen || skill.provider?.lastSeen || new Date();
-            
-            // ✅ SAFE STATUS BADGE GENERATION
-            const statusBadge = isOnline ? 
-                '<span class="badge bg-success status-badge"><i class="fas fa-circle me-1"></i>Online</span>' :
-                `<span class="badge bg-secondary status-badge"><i class="fas fa-clock me-1"></i>${OnlineStatusManager.formatLastSeen(lastSeen)}</span>`;
+        // ✅ SAFE DATA ACCESS WITH COMPREHENSIVE FALLBACKS
+        const skillName = skill.name || 'Unnamed Skill';
+        const providerName = skill.providerName || skill.provider?.name || 'Unknown User';
+        const category = skill.category || 'General';
+        const description = skill.description || 'No description available';
+        const location = skill.location || 'Location not specified';
+        const timeRequired = skill.timeRequired || 1;
+        const rating = skill.rating || 4.5;
+        
+        // ✅ SAFE ONLINE STATUS CHECK
+        const isOnline = skill.providerOnline !== undefined ? skill.providerOnline : 
+                        (skill.provider?.isOnline || false);
+        const lastSeen = skill.providerLastSeen || skill.provider?.lastSeen || new Date();
+        
+        // ✅ SAFE STATUS BADGE
+        const statusBadge = isOnline ? 
+            '<span class="badge bg-success status-badge"><i class="fas fa-circle me-1"></i>Online</span>' :
+            `<span class="badge bg-secondary status-badge"><i class="fas fa-clock me-1"></i>${OnlineStatusManager.formatLastSeen(lastSeen)}</span>`;
 
-            // ✅ SAFE USER INITIALS
-            const userInitials = getUserInitials(providerName);
-            
-            // ✅ SAFE STATUS TEXT
-            const statusText = isOnline ? 
-                '<span class="text-success"><i class="fas fa-circle me-1"></i>Online now</span>' : 
-                `<span class="text-muted"><i class="fas fa-clock me-1"></i>Last seen ${OnlineStatusManager.formatLastSeen(lastSeen)}</span>`;
+        // ✅ SAFE SKILL ID FOR CLICK HANDLER
+        const skillId = skill.id || skill._id || 'unknown';
 
-            return `
-            <div class="col-md-6 col-lg-4 mb-4">
-                <div class="card h-100 skill-card" style="cursor: pointer;" onclick="openSkillDetails('${skillId}')">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <h5 class="card-title text-dark">${skillName}</h5>
-                            <span class="badge bg-secondary">${category}</span>
-                        </div>
-                        <p class="card-text text-muted small">${description}</p>
-                        
-                        <!-- User Profile Section with Enhanced Online Status -->
-                        <div class="user-profile-section mb-3 p-3 bg-light rounded">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div class="d-flex align-items-center">
-                                    <div class="user-avatar me-3 position-relative">
-                                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
-                                             style="width: 40px; height: 40px; font-size: 14px;">
-                                            ${userInitials}
-                                        </div>
-                                        <!-- Enhanced Online Status Indicator -->
-                                        <div class="position-absolute bottom-0 end-0 ${isOnline ? 'bg-success' : 'bg-secondary'} rounded-circle border border-2 border-white status-indicator"
-                                             style="width: 12px; height: 12px;"
-                                             title="${isOnline ? 'Online now' : 'Offline'}">
-                                        </div>
+        return `
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 skill-card" style="cursor: pointer;" onclick="openSkillDetails('${skillId}')">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="card-title">${skillName}</h5>
+                        <span class="badge bg-secondary">${category}</span>
+                    </div>
+                    <p class="card-text text-muted small">${description}</p>
+                    
+                    <!-- User Profile Section with Enhanced Online Status -->
+                    <div class="user-profile-section mb-3 p-3 bg-light rounded">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center">
+                                <div class="user-avatar me-3 position-relative">
+                                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
+                                         style="width: 40px; height: 40px; font-size: 14px;">
+                                        ${getUserInitials(providerName)}
                                     </div>
-                                    <div class="user-info">
-                                        <h6 class="mb-1 text-dark">${providerName}</h6>
-                                        <small class="text-muted">
-                                            <i class="fas fa-map-marker-alt me-1"></i> ${location}
-                                        </small>
-                                        <div class="status-text small mt-1">
-                                            ${statusText}
-                                        </div>
+                                    <!-- Enhanced Online Status Indicator -->
+                                    <div class="position-absolute bottom-0 end-0 ${isOnline ? 'bg-success' : 'bg-secondary'} rounded-circle border border-2 border-white status-indicator"
+                                         style="width: 12px; height: 12px;"
+                                         title="${isOnline ? 'Online now' : 'Offline'}">
                                     </div>
                                 </div>
-                                ${statusBadge}
+                                <div class="user-info">
+                                    <h6 class="mb-1">${providerName}</h6>
+                                    <small class="text-muted">
+                                        <i class="fas fa-map-marker-alt me-1"></i> ${location}
+                                    </small>
+                                    <div class="status-text small mt-1">
+                                        ${isOnline ? 
+                                            '<span class="text-success"><i class="fas fa-circle me-1"></i>Online now</span>' : 
+                                            `<span class="text-muted"><i class="fas fa-clock me-1"></i>Last seen ${OnlineStatusManager.formatLastSeen(lastSeen)}</span>`
+                                        }
+                                    </div>
+                                </div>
                             </div>
+                            ${statusBadge}
                         </div>
-                        
-                        <div class="skill-details">
-                            <small class="text-muted">
-                                <i class="fas fa-clock me-1"></i> ${timeRequired} hour${timeRequired > 1 ? 's' : ''}
+                    </div>
+                    
+                    <div class="skill-details">
+                        <small class="text-muted">
+                            <i class="fas fa-clock me-1"></i> ${timeRequired} hour(s)
+                        </small>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <div>
+                            <small class="text-warning">
+                                ${'★'.repeat(Math.floor(rating))}${'☆'.repeat(5 - Math.floor(rating))}
+                                <span class="ms-1">${rating}</span>
                             </small>
                         </div>
-                        <div class="d-flex justify-content-between align-items-center mt-3">
-                            <div>
-                                <small class="text-warning">
-                                    ${'★'.repeat(Math.floor(rating))}${'☆'.repeat(5 - Math.floor(rating))}
-                                    <span class="ms-1 text-dark">${rating}</span>
-                                </small>
-                            </div>
-                            <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); requestExchange('${skillId}')">
-                                ${isOnline ? 'Exchange Now' : 'Request'}
-                            </button>
-                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); requestExchange('${skillId}')">
+                            ${isOnline ? 'Exchange Now' : 'Request'}
+                        </button>
                     </div>
                 </div>
             </div>
-            `;
-        } catch (error) {
-            console.error('❌ Error rendering skill card:', error, skill);
-            return ''; // Return empty string for failed skill cards
-        }
+        </div>
+        `;
     }).join('');
-    
-    console.log(`✅ Successfully populated ${skills.length} skills in the grid`);
+
+    console.log('✅ Skills grid populated successfully');
 }
+
+// ✅ ADD MISSING CSS FOR SKILLS GRID
+const skillsGridStyles = document.createElement('style');
+skillsGridStyles.textContent = `
+    .skills-grid {
+        min-height: 400px;
+    }
+    
+    .skill-card {
+        transition: all 0.3s ease;
+        border: 1px solid #e9ecef;
+    }
+    
+    .skill-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        border-color: #007bff;
+    }
+    
+    .user-profile-section {
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        border-left: 4px solid #007bff;
+        border-radius: 8px;
+    }
+    
+    .status-indicator {
+        width: 12px;
+        height: 12px;
+        border: 2px solid white;
+    }
+    
+    .status-badge {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    #skills-grid:empty::before {
+        content: "Loading skills...";
+        display: block;
+        text-align: center;
+        padding: 2rem;
+        color: #6c757d;
+    }
+`;
+document.head.appendChild(skillsGridStyles);
+
 // ✅ ADD MISSING UTILITY FUNCTION
 function getUserInitials(name) {
     if (!name) return 'U';
@@ -4601,6 +4646,7 @@ async function initializeApp() {
     console.log('🚀 Initializing LocalLink app...');
     
     try {
+
         // Setup navigation and event listeners first
         setupNavigationHandlers();
         setupEventListeners();
