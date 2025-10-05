@@ -1228,10 +1228,10 @@ fastify.post('/api/debug/test-save', { preHandler: authenticate }, async (reques
         });
     }
 });
-// ✅ ENHANCED SKILLS ROUTES WITH BETTER ONLINE STATUS
+// ✅ ENHANCED SKILLS ROUTES WITH REAL-TIME ONLINE STATUS
 fastify.get('/api/skills', async (request, reply) => {
     try {
-        console.log('🔄 Fetching all skills...');
+        console.log('🔄 Fetching all skills with online status...');
         
         const skills = await Skill.find({ isActive: true })
             .populate('provider', 'name email location profilePicture isOnline lastSeen lastActivity')
@@ -1241,10 +1241,16 @@ fastify.get('/api/skills', async (request, reply) => {
 
         const formattedSkills = skills.map(skill => {
             const skillObj = skill.toObject();
-            const isProviderOnline = skillObj.provider?.isOnline || false;
-            const lastSeen = skillObj.provider?.lastSeen || new Date();
             
-            console.log(`🔍 Skill: ${skillObj.name}, Provider: ${skillObj.providerName}, Online: ${isProviderOnline}`);
+            // Enhanced online status detection
+            const isProviderOnline = skillObj.provider?.isOnline || false;
+            const lastSeen = skillObj.provider?.lastSeen || skillObj.createdAt || new Date();
+            const lastActivity = skillObj.provider?.lastActivity || lastSeen;
+            
+            // Calculate if user should be considered "recently active"
+            const isRecentlyActive = (new Date() - new Date(lastActivity)) < 5 * 60 * 1000; // 5 minutes
+            
+            console.log(`🔍 Skill: ${skillObj.name}, Provider: ${skillObj.providerName}, Online: ${isProviderOnline}, Recent: ${isRecentlyActive}`);
             
             return {
                 id: skillObj._id,
@@ -1257,23 +1263,37 @@ fastify.get('/api/skills', async (request, reply) => {
                 location: skillObj.location,
                 price: skillObj.price || `${skillObj.timeRequired} hour${skillObj.timeRequired > 1 ? 's' : ''}`,
                 rating: skillObj.rating || 4.5,
-                providerOnline: isProviderOnline,
+                providerOnline: isProviderOnline || isRecentlyActive, // Consider recently active as online
                 providerLastSeen: lastSeen,
-                providerActivity: skillObj.provider?.lastActivity,
+                providerActivity: lastActivity,
+                isActive: skillObj.isActive !== false,
+                createdAt: skillObj.createdAt,
                 debug: {
                     populatedProvider: !!skillObj.provider,
                     providerOnline: skillObj.provider?.isOnline,
-                    skillProviderOnline: skillObj.providerOnline
+                    recentlyActive: isRecentlyActive
                 }
             };
         });
         
-        return formattedSkills;
+        // Sort skills: online users first, then by last activity
+        const sortedSkills = formattedSkills.sort((a, b) => {
+            // Online users first
+            if (a.providerOnline && !b.providerOnline) return -1;
+            if (!a.providerOnline && b.providerOnline) return 1;
+            
+            // Then by most recent activity
+            return new Date(b.providerActivity) - new Date(a.providerActivity);
+        });
+        
+        return sortedSkills;
     } catch (error) {
-        console.error('❌ Get skills error:', error);
-        reply.status(500).send({ error: 'Failed to get skills' });
+        console.error('❌ Get skills error:', error); 
+        console.log('🔄 Returning sample skills data due to error');
+        return sampleSkills;
     }
 });
+
 // ✅ FIXED SKILL CREATION ROUTE
 fastify.post('/api/skills', { preHandler: authenticate }, async (request, reply) => {
     try {
@@ -1332,6 +1352,44 @@ fastify.post('/api/skills', { preHandler: authenticate }, async (request, reply)
     }
 });
 
+// ✅ ADD REAL-TIME USER STATUS ENDPOINT
+fastify.get('/api/users/online-status', async (request, reply) => {
+    try {
+        const onlineUsers = await User.find({ 
+            isOnline: true,
+            lastActivity: { $gte: new Date(Date.now() - 5 * 60 * 1000) } // Active in last 5 minutes
+        }).select('name email location profilePicture lastActivity');
+        
+        const recentlyActiveUsers = await User.find({
+            isOnline: false,
+            lastActivity: { $gte: new Date(Date.now() - 30 * 60 * 1000) } // Active in last 30 minutes
+        }).select('name email location profilePicture lastActivity lastSeen');
+        
+        return {
+            online: onlineUsers.map(user => ({
+                id: user._id,
+                name: user.name,
+                location: user.location,
+                lastActivity: user.lastActivity,
+                isOnline: true
+            })),
+            recentlyActive: recentlyActiveUsers.map(user => ({
+                id: user._id,
+                name: user.name,
+                location: user.location,
+                lastActivity: user.lastActivity,
+                lastSeen: user.lastSeen,
+                isOnline: false
+            })),
+            totalOnline: onlineUsers.length,
+            totalRecentlyActive: recentlyActiveUsers.length,
+            lastUpdated: new Date()
+        };
+    } catch (error) {
+        console.error('Get online status error:', error);
+        reply.status(500).send({ error: 'Failed to get online status' });
+    }
+});
 // ✅ SESSION ROUTES
 
 // Create session from exchange
