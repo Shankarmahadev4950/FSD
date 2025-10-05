@@ -637,7 +637,7 @@ function startVideoCall(skillId, recipientId, recipientName) {
     videoCallManager.startCall(skillId, recipientId, recipientName);
 }
 
-// ✅ SEND MESSAGE
+// ✅ FIXED: SEND MESSAGE FUNCTION
 async function sendMessage() {
     if (!currentChatSkill || !currentUser) return;
     
@@ -658,14 +658,17 @@ async function sendMessage() {
             body: messageData
         });
         
+        // ✅ FIXED: Use the correct response structure
+        const newMessage = response.messageData || response.message;
+        
         // Add message to local array
         messages.push({
-            id: response.message.id,
+            id: newMessage.id,
             content: content,
             senderId: currentUser.id,
             receiverId: currentChatSkill.providerId,
-            timestamp: new Date().toISOString(),
-            read: false
+            timestamp: newMessage.timestamp || new Date().toISOString(),
+            read: newMessage.read || false
         });
         
         // Clear input and update display
@@ -677,7 +680,6 @@ async function sendMessage() {
         NotificationManager.show('Failed to send message', 'error');
     }
 }
-
 // ✅ START REAL-TIME MESSAGE POLLING
 function startMessagePolling(skillId) {
     // Clear existing interval
@@ -726,8 +728,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
-// ✅ ENHANCED API FUNCTIONS WITH TIMEOUT
-// ✅ ENHANCED API FUNCTIONS WITH TIMEOUT AND AD BLOCKER HANDLING
+// ✅ ENHANCED API FUNCTIONS WITH TIMEOUT, ERROR HANDLING AND AD BLOCKER DETECTION
 async function apiRequest(endpoint, options = {}) {
     const url = `${API_BASE}${endpoint}`;
     
@@ -772,6 +773,7 @@ async function apiRequest(endpoint, options = {}) {
         if (contentType && contentType.includes('application/json')) {
             data = await response.json();
         } else {
+            // Handle non-JSON responses gracefully
             const text = await response.text();
             throw new Error(`Unexpected response: ${text}`);
         }
@@ -779,12 +781,23 @@ async function apiRequest(endpoint, options = {}) {
         console.log(`✅ API Response: ${config.method || 'GET'} ${url}`, data);
 
         if (!response.ok) {
-            // Handle 400 Bad Request specifically
+            // Handle 400 Bad Request specifically for duplicate actions
             if (response.status === 400 && data.error?.includes('Duplicate')) {
                 NotificationManager.show('This action was already completed. Please continue browsing.', 'info');
                 return { success: true, duplicate: true };
             }
-            throw new Error(data.error || `API error: ${response.status}`);
+            
+            // Handle authentication errors
+            if (response.status === 401 || response.status === 403) {
+                TokenManager.clearToken();
+                currentUser = null;
+                updateUIForLoggedOutUser();
+                NotificationManager.show('Session expired. Please log in again.', 'error');
+                showSection('login');
+                throw new Error('Authentication failed');
+            }
+            
+            throw new Error(data.error || data.message || `API error: ${response.status}`);
         }
 
         return data;
@@ -803,8 +816,13 @@ async function apiRequest(endpoint, options = {}) {
             } else {
                 NotificationManager.show('Cannot connect to server. Please check your internet connection.', 'error');
             }
+        } else if (error.message.includes('Invalid JSON response')) {
+            NotificationManager.show('Server response error. Please try again.', 'error');
         } else {
-            NotificationManager.show(error.message, 'error');
+            // Only show notification for non-authentication errors
+            if (!error.message.includes('Authentication failed')) {
+                NotificationManager.show(error.message, 'error');
+            }
         }
         
         throw error;
@@ -1136,14 +1154,13 @@ async function loadSkills() {
 }
 // In app.js, change these:
 async function registerUser(userData) {
-    return apiRequest('/users/register', {  // NOT /auth/register
+    return apiRequest('/auth/register', {  // Changed from /users/register
         method: 'POST',
         body: userData
     });
 }
-
 async function loginUser(credentials) {
-    return apiRequest('/users/login', {  // NOT /auth/login
+    return apiRequest('/auth/login', {  // NOT /auth/login
         method: 'POST', 
         body: credentials
     });
@@ -1675,81 +1692,6 @@ function showAuthForm(type) {
     }
 }
 
-// ✅ ENHANCED SIGN UP HANDLER
-async function handleSignup(e) {
-    e.preventDefault();
-    console.log('Signup form submitted');
-    currentUser = response.user;
-    updateUIForLoggedInUser(); // This will show the user dropdown
-    let name = '';
-    const firstName = document.getElementById('signup-firstname')?.value.trim() || '';
-    const lastName = document.getElementById('signup-lastname')?.value.trim() || '';
-    const fullName = document.getElementById('signup-name')?.value.trim() || '';
-    
-    if (firstName && lastName) {
-        name = `${firstName} ${lastName}`.trim();
-    } else if (fullName) {
-        name = fullName;
-    }
-    
-    const email = document.getElementById('signup-email')?.value.trim() || '';
-    const password = document.getElementById('signup-password')?.value || '';
-    const confirmPassword = document.getElementById('signup-confirm-password')?.value || '';
-    const location = document.getElementById('signup-location')?.value.trim() || '';
-
-    if (!name || !email || !password) {
-        NotificationManager.show('Please fill in all required fields', 'error');
-        return;
-    }
-
-    if (password !== confirmPassword) {
-        NotificationManager.show('Passwords do not match', 'error');
-        return;
-    }
-
-    if (password.length < 6) {
-        NotificationManager.show('Password must be at least 6 characters long', 'error');
-        return;
-    }
-
-    if (!validateEmail(email)) {
-        NotificationManager.show('Please enter a valid email address', 'error');
-        return;
-    }
-
-    const submitBtn = e.target.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Account...';
-    submitBtn.disabled = true;
-
-    try {
-        const userData = { 
-            name, 
-            email, 
-            password, 
-            location
-        };
-        
-        console.log('🔄 Sending registration request:', userData);
-        
-        const response = await registerUser(userData);
-        
-        TokenManager.setToken(response.token);
-        currentUser = response.user;
-        
-        NotificationManager.show('Registration successful! Welcome to LocalLink!', 'success');
-        updateUIForLoggedInUser();
-        showSection('dashboard');
-        
-    } catch (error) {
-        console.error('Signup error:', error);
-    } finally {
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
-    }
-}
-
-// ✅ ENHANCED LOGIN HANDLER WITH ACTIVITY TRACKING
 // ✅ ENHANCED LOGIN HANDLER WITH BETTER ERROR HANDLING
 async function handleSignin(e) {
     e.preventDefault();
@@ -1836,17 +1778,28 @@ function handleLogout() {
     showSection('landing');
 }
 
-// ✅ ENHANCED SIGN UP HANDLER  
+// ✅ ENHANCED SIGN UP HANDLER
 async function handleSignup(e) {
     e.preventDefault();
+    
+    // Prevent multiple simultaneous submissions
+    if (isSubmitting) {
+        NotificationManager.show('Please wait, processing your request...', 'info');
+        return;
+    }
+    
     console.log('Signup form submitted');
     
     let name = '';
     const firstName = document.getElementById('signup-firstname')?.value.trim() || '';
     const lastName = document.getElementById('signup-lastname')?.value.trim() || '';
+    const fullName = document.getElementById('signup-name')?.value.trim() || '';
     
+    // Handle both name formats (split first/last or single name field)
     if (firstName && lastName) {
         name = `${firstName} ${lastName}`.trim();
+    } else if (fullName) {
+        name = fullName;
     }
     
     const email = document.getElementById('signup-email')?.value.trim() || '';
@@ -1854,6 +1807,7 @@ async function handleSignup(e) {
     const confirmPassword = document.getElementById('signup-confirm-password')?.value || '';
     const location = document.getElementById('signup-location')?.value.trim() || '';
 
+    // Validation checks
     if (!name || !email || !password) {
         NotificationManager.show('Please fill in all required fields', 'error');
         return;
@@ -1874,6 +1828,8 @@ async function handleSignup(e) {
         return;
     }
 
+    // Set submitting state and update UI
+    isSubmitting = true;
     const submitBtn = e.target.querySelector('button[type="submit"]');
     const originalText = submitBtn.innerHTML;
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Account...';
@@ -1891,6 +1847,7 @@ async function handleSignup(e) {
         
         const response = await registerUser(userData);
         
+        // Store token and user data
         TokenManager.setToken(response.token);
         currentUser = response.user;
         
@@ -1902,8 +1859,10 @@ async function handleSignup(e) {
         console.error('❌ Signup error:', error);
         NotificationManager.show(error.message || 'Registration failed. Please try again.', 'error');
     } finally {
+        // Reset UI state
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
+        isSubmitting = false;
     }
 }
 // ✅ ENHANCED PROFILE SAVE HANDLER
@@ -3897,11 +3856,11 @@ function populateSkillsGrid(skills) {
     }).join('');
 }
 // ✅ HELPER FUNCTION FOR USER INITIALS
+// ✅ ADD MISSING UTILITY FUNCTION
 function getUserInitials(name) {
     if (!name) return 'U';
     return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
 }
-
 // ✅ FIXED: User card click handler
 function openSkillDetails(skillId) {
     console.log('Opening skill details for:', skillId);
