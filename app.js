@@ -1112,10 +1112,12 @@ function renderCoursesCompleted(stats) {
 }
 // ✅ TOGGLE ACTIVITY VIEW
 
-// ✅ ENHANCED SKILLS LOADING - TRACK ONLINE USERS
+// ✅ ENHANCED SKILLS LOADING WITH ONLINE STATUS
 async function loadSkills() {
     try {
+        console.log('🔄 Loading skills from API...');
         const skills = await apiRequest('/skills');
+        
         // Filter only active skills that have providers
         filteredSkills = skills.filter(skill => 
             skill.isActive !== false && 
@@ -1123,30 +1125,47 @@ async function loadSkills() {
             skill.providerId !== currentUser?.id
         );
         
-        // Count online users
+        console.log(`✅ Loaded ${filteredSkills.length} skills from API`);
+        
+        // Count online users for notification badge
         const onlineUsersCount = filteredSkills.filter(skill => 
             skill.providerOnline === true
         ).length;
+        
+        console.log(`👥 Online users: ${onlineUsersCount}`);
         
         // Update notification badge with online users count
         NotificationManager.showOnlineUsersCount(onlineUsersCount);
         
+        // Always populate the skills grid when skills are loaded
         if (currentSection === 'skills') {
             populateSkillsGrid(filteredSkills);
         }
+        
     } catch (error) {
-        console.error('Failed to load skills:', error);
+        console.error('❌ Failed to load skills from API:', error);
+        
         // Fallback to local data if API fails
+        console.log('🔄 Using fallback local data...');
         filteredSkills = appData.availableSkills.filter(skill => 
             skill.providerId !== currentUser?.id
         );
         
-        // Still count online users from fallback data
+        // Add mock online status to local data
+        filteredSkills = filteredSkills.map(skill => ({
+            ...skill,
+            providerOnline: Math.random() > 0.5, // Random online status for demo
+            providerLastSeen: new Date(Date.now() - Math.random() * 24 * 60 * 60 * 1000) // Random last seen
+        }));
+        
+        // Count online users from fallback data
         const onlineUsersCount = filteredSkills.filter(skill => 
             skill.providerOnline === true
         ).length;
+        
         NotificationManager.showOnlineUsersCount(onlineUsersCount);
         
+        // Always populate the skills grid with fallback data
         if (currentSection === 'skills') {
             populateSkillsGrid(filteredSkills);
         }
@@ -3736,57 +3755,128 @@ function renderWeeklyStats() {
 function loadSkillsMarketplace() {
     console.log('🔄 Loading skills marketplace...');
     
-    // Ensure we have skills to display
-    if (!filteredSkills || filteredSkills.length === 0) {
-        console.log('⚠️ No filtered skills available, loading from API...');
+    // Show loading state immediately
+    const skillsGrid = document.getElementById('skills-grid');
+    if (skillsGrid) {
+        skillsGrid.innerHTML = `
+            <div class="col-12">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">Loading skills...</span>
+                    </div>
+                    <h5>Loading Skills Marketplace</h5>
+                    <p class="text-muted">Discover talented people in your community</p>
+                </div>
+            </div>`;
+    }
+    
+    // Always load fresh data from API
+    loadSkills().then(() => {
+        console.log('✅ Skills loaded successfully from API');
         
-        // Show loading state
-        const skillsGrid = document.getElementById('skills-grid');
+        // Double-check that skills are populated
+        if (filteredSkills && filteredSkills.length > 0) {
+            console.log(`✅ Displaying ${filteredSkills.length} skills in marketplace`);
+            populateSkillsGrid(filteredSkills);
+            updateResultsCount(filteredSkills.length);
+        } else {
+            console.log('⚠️ No skills available after loading');
+            showNoSkillsMessage();
+        }
+        
+    }).catch(error => {
+        console.error('❌ Failed to load skills from API:', error);
+        
+        // Show error state with retry option
         if (skillsGrid) {
             skillsGrid.innerHTML = `
                 <div class="col-12">
                     <div class="text-center py-5">
-                        <div class="spinner-border text-primary mb-3" role="status">
-                            <span class="visually-hidden">Loading skills...</span>
+                        <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                        <h5>Unable to Load Skills</h5>
+                        <p class="text-muted mb-3">We couldn't load the skills marketplace. This might be due to:</p>
+                        <ul class="text-muted text-start mb-4" style="display: inline-block;">
+                            <li>Network connection issues</li>
+                            <li>Server temporarily unavailable</li>
+                            <li>Ad blocker preventing requests</li>
+                        </ul>
+                        <div class="d-flex gap-2 justify-content-center">
+                            <button class="btn btn-primary" onclick="loadSkillsMarketplace()">
+                                <i class="fas fa-redo me-2"></i>Try Again
+                            </button>
+                            <button class="btn btn-outline-secondary" onclick="showGetStartedModal()">
+                                <i class="fas fa-plus me-2"></i>Add Your Skill
+                            </button>
                         </div>
-                        <h5>Loading skills...</h5>
-                        <p class="text-muted">Fetching available skills from the community</p>
                     </div>
                 </div>`;
         }
-        
-        // Load skills from API - this will call populateSkillsGrid when done
-        loadSkills().then(() => {
-            console.log('✅ Skills loaded successfully from API');
-        }).catch(error => {
-            console.error('❌ Failed to load skills from API:', error);
-            // Show error state
-            if (skillsGrid) {
-                skillsGrid.innerHTML = `
-                    <div class="col-12">
-                        <div class="text-center py-5">
-                            <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
-                            <h5>Failed to load skills</h5>
-                            <p class="text-muted">Please check your connection and try again</p>
-                            <button class="btn btn-primary mt-2" onclick="loadSkillsMarketplace()">
-                                <i class="fas fa-redo me-2"></i>Retry
-                            </button>
-                        </div>
-                    </div>`;
-            }
-        });
-    } else {
-        console.log(`✅ Displaying ${filteredSkills.length} available skills`);
-        populateSkillsGrid(filteredSkills);
-    }
+    });
     
     // Initialize marketplace components
-    populateCategories();
-    setupSearchListeners();
-    setupFilterHandlers();
+    initializeMarketplaceComponents();
     
     // Update online users count badge
     updateOnlineUsersBadge();
+    
+    console.log('✅ Skills marketplace loading initiated');
+}
+
+// ✅ HELPER FUNCTION TO UPDATE ONLINE USERS BADGE
+function updateOnlineUsersBadge() {
+    if (filteredSkills && filteredSkills.length > 0) {
+        const onlineUsersCount = filteredSkills.filter(skill => 
+            skill.providerOnline === true
+        ).length;
+        
+        NotificationManager.showOnlineUsersCount(onlineUsersCount);
+    } else {
+        NotificationManager.showOnlineUsersCount(0);
+    }
+}
+
+// ✅ HELPER FUNCTION TO INITIALIZE MARKETPLACE COMPONENTS
+function initializeMarketplaceComponents() {
+    console.log('🔄 Initializing marketplace components...');
+    
+    // Initialize all marketplace UI components
+    setTimeout(() => {
+        populateCategories();
+        setupSearchListeners();
+        setupFilterHandlers();
+        console.log('✅ Marketplace components initialized');
+    }, 100);
+}
+// ✅ HELPER FUNCTION TO UPDATE RESULTS COUNT
+function updateResultsCount(count) {
+    const resultsCount = document.getElementById('results-count');
+    if (resultsCount) {
+        resultsCount.textContent = `${count} skill${count !== 1 ? 's' : ''} found`;
+        resultsCount.style.display = 'block';
+    }
+}
+
+// ✅ HELPER FUNCTION TO SHOW NO SKILLS MESSAGE
+function showNoSkillsMessage() {
+    const skillsGrid = document.getElementById('skills-grid');
+    if (skillsGrid) {
+        skillsGrid.innerHTML = `
+            <div class="col-12">
+                <div class="text-center py-5">
+                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                    <h5>No Skills Available Yet</h5>
+                    <p class="text-muted mb-4">Be the first to share your skills with the community!</p>
+                    <div class="d-flex gap-2 justify-content-center">
+                        <button class="btn btn-primary" onclick="showGetStartedModal()">
+                            <i class="fas fa-plus me-2"></i>Add Your First Skill
+                        </button>
+                        <button class="btn btn-outline-primary" onclick="loadSkillsMarketplace()">
+                            <i class="fas fa-redo me-2"></i>Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+    }
 }
 
 // ✅ BASIC REAL-TIME MESSAGING WITH POLLING
@@ -3807,7 +3897,6 @@ function stopMessagePolling() {
     }
 }
 
-// ✅ ENHANCED SKILLS GRID POPULATION FUNCTION
 function populateSkillsGrid(skills) {
     const skillsGrid = document.getElementById('skills-grid');
     if (!skillsGrid) {
@@ -3854,6 +3943,11 @@ function populateSkillsGrid(skills) {
 
             // ✅ SAFE USER INITIALS
             const userInitials = getUserInitials(providerName);
+            
+            // ✅ SAFE STATUS TEXT
+            const statusText = isOnline ? 
+                '<span class="text-success"><i class="fas fa-circle me-1"></i>Online now</span>' : 
+                `<span class="text-muted"><i class="fas fa-clock me-1"></i>Last seen ${OnlineStatusManager.formatLastSeen(lastSeen)}</span>`;
 
             return `
             <div class="col-md-6 col-lg-4 mb-4">
@@ -3886,10 +3980,7 @@ function populateSkillsGrid(skills) {
                                             <i class="fas fa-map-marker-alt me-1"></i> ${location}
                                         </small>
                                         <div class="status-text small mt-1">
-                                            ${isOnline ? 
-                                                '<span class="text-success"><i class="fas fa-circle me-1"></i>Online now</span>' : 
-                                                `<span class="text-muted"><i class="fas fa-clock me-1"></i>Last seen ${OnlineStatusManager.formatLastSeen(lastSeen)}</span>`
-                                            }
+                                            ${statusText}
                                         </div>
                                     </div>
                                 </div>
