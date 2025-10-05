@@ -482,20 +482,6 @@ function showMessagingUI(skill) {
     // Setup message sending
     setupMessageSending();
 }
-
-// ✅ LOAD MESSAGES
-async function loadMessages(skillId) {
-    try {
-        const response = await apiRequest(`/messages/skill/${skillId}`);
-        messages = response.messages || [];
-        displayMessages();
-    } catch (error) {
-        console.error('Error loading messages:', error);
-        messages = [];
-        displayMessages();
-    }
-}
-
 // ✅ DISPLAY MESSAGES
 function displayMessages() {
     const container = document.getElementById('messages-container');
@@ -628,28 +614,6 @@ function performSkillsSearch(searchTerm) {
     populateSkillsGrid(filtered);
 }
 
-// ✅ SETUP MESSAGE SENDING
-function setupMessageSending() {
-    const sendBtn = document.getElementById('send-message-btn');
-    const messageInput = document.getElementById('message-input');
-    
-    if (sendBtn && messageInput) {
-        // Remove existing event listeners
-        sendBtn.replaceWith(sendBtn.cloneNode(true));
-        messageInput.replaceWith(messageInput.cloneNode(true));
-        
-        // Get new references
-        const newSendBtn = document.getElementById('send-message-btn');
-        const newMessageInput = document.getElementById('message-input');
-        
-        newSendBtn.addEventListener('click', sendMessage);
-        newMessageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
-        });
-    }
-}
 
 // ✅ GLOBAL WEBSOCKET EVENT HANDLER (add this to your app.js)
 document.addEventListener('DOMContentLoaded', function() {
@@ -734,48 +698,113 @@ function startVideoCall(skillId, recipientId, recipientName) {
     // All checks passed - start the call
     videoCallManager.startCall(skillId, recipientId, recipientName);
 }
-
 // ✅ FIXED: SEND MESSAGE FUNCTION
 async function sendMessage() {
-    if (!currentChatSkill || !currentUser) return;
+    if (!currentChatSkill || !currentUser) {
+        NotificationManager.show('Please select a skill and login first', 'error');
+        return;
+    }
     
     const messageInput = document.getElementById('message-input');
     const content = messageInput.value.trim();
     
-    if (!content) return;
+    if (!content) {
+        NotificationManager.show('Please enter a message', 'error');
+        return;
+    }
     
     try {
+        console.log('🔄 Sending message for skill:', currentChatSkill.id);
+        
         const messageData = {
             skillId: currentChatSkill.id,
             receiverId: currentChatSkill.providerId,
             content: content
         };
         
+        console.log('📝 Message data:', messageData);
+        
         const response = await apiRequest('/messages/send', {
             method: 'POST',
             body: messageData
         });
         
-        // ✅ FIXED: Use the correct response structure
-        const newMessage = response.messageData || response.message;
+        console.log('✅ Message send response:', response);
         
-        // Add message to local array
-        messages.push({
-            id: newMessage.id,
-            content: content,
-            senderId: currentUser.id,
-            receiverId: currentChatSkill.providerId,
-            timestamp: newMessage.timestamp || new Date().toISOString(),
-            read: newMessage.read || false
-        });
-        
-        // Clear input and update display
-        messageInput.value = '';
-        displayMessages();
+        if (response.messageData) {
+            // Add message to local array
+            messages.push({
+                id: response.messageData.id,
+                content: content,
+                senderId: currentUser.id,
+                receiverId: currentChatSkill.providerId,
+                timestamp: response.messageData.timestamp || new Date().toISOString(),
+                read: response.messageData.read || false
+            });
+            
+            // Clear input and update display
+            messageInput.value = '';
+            displayMessages();
+            
+            NotificationManager.show('Message sent successfully!', 'success');
+        } else {
+            throw new Error('Invalid response from server');
+        }
         
     } catch (error) {
-        console.error('Error sending message:', error);
-        NotificationManager.show('Failed to send message', 'error');
+        console.error('❌ Error sending message:', error);
+        NotificationManager.show('Failed to send message: ' + error.message, 'error');
+    }
+}
+
+// ✅ FIXED: LOAD MESSAGES FUNCTION
+async function loadMessages(skillId) {
+    try {
+        console.log('🔄 Loading messages for skill:', skillId);
+        
+        if (!skillId || skillId === 'undefined') {
+            console.error('Invalid skill ID:', skillId);
+            messages = [];
+            displayMessages();
+            return;
+        }
+        
+        const response = await apiRequest(`/messages/skill/${skillId}`);
+        console.log('✅ Messages loaded:', response.messages?.length || 0);
+        
+        messages = response.messages || [];
+        displayMessages();
+    } catch (error) {
+        console.error('❌ Error loading messages:', error);
+        messages = [];
+        displayMessages();
+        
+        // Don't show error for empty messages, only for actual errors
+        if (!error.message.includes('Network') && !error.message.includes('timeout')) {
+            NotificationManager.show('Failed to load messages', 'error');
+        }
+    }
+}
+
+// ✅ FIXED: SETUP MESSAGE SENDING
+function setupMessageSending() {
+    const sendBtn = document.getElementById('send-message-btn');
+    const messageInput = document.getElementById('message-input');
+    
+    if (sendBtn && messageInput) {
+        // Remove existing event listeners
+        sendBtn.onclick = null;
+        messageInput.onkeypress = null;
+        
+        // Add new event listeners
+        sendBtn.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        console.log('✅ Message sending setup completed');
     }
 }
 // ✅ START REAL-TIME MESSAGE POLLING
@@ -2473,23 +2502,6 @@ function handleSkillReference(skill) {
     
     console.log('✅ Safe skill object:', safeSkill.name);
     return safeSkill;
-}
-
-// ✅ USAGE EXAMPLES:
-
-// Example 1: In skill card click handler
-function openSkillDetails(skillId) {
-    const skill = filteredSkills.find(s => s.id.toString() === skillId.toString());
-    const safeSkill = handleSkillReference(skill);
-    
-    if (!safeSkill) {
-        NotificationManager.show('Skill not found', 'error');
-        return;
-    }
-    
-    // Now safely use the skill
-    console.log('Opening details for:', safeSkill.name);
-    showMessagingUI(safeSkill);
 }
 
 // Example 2: In skill rendering
@@ -4347,26 +4359,6 @@ function getUserInitials(name) {
     if (!name) return 'U';
     return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
 }
-// ✅ FIXED: User card click handler
-function openSkillDetails(skillId) {
-    console.log('Opening skill details for:', skillId);
-    
-    // Find skill by string ID comparison
-    const skill = filteredSkills.find(s => s.id.toString() === skillId.toString());
-    
-    if (!skill) {
-        console.error('Skill not found for ID:', skillId);
-        console.log('Available skills:', filteredSkills.map(s => ({ id: s.id, name: s.name })));
-        NotificationManager.show('Skill not found. Please try again.', 'error');
-        return;
-    }
-    
-    console.log('Found skill:', skill);
-    
-    // Show messaging modal
-    showMessagingUI(skill);
-}
-
 // ✅ FIXED: User card click handler
 function openSkillDetails(skillId) {
     console.log('Opening skill details for:', skillId);
