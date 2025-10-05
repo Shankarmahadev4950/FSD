@@ -530,6 +530,104 @@ function displayMessages() {
     container.scrollTop = container.scrollHeight;
 }
 
+function setupFilterHandlers() {
+    console.log('🔧 Setting up filter handlers...');
+    
+    // Search input handler
+    const searchInput = document.getElementById('skill-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', debounce((e) => {
+            const searchTerm = e.target.value.trim();
+            console.log('🔍 Searching for:', searchTerm);
+            searchSkills();
+        }, 300));
+    }
+    
+    // Category filter handler
+    const categoryFilter = document.getElementById('category-filter');
+    if (categoryFilter) {
+        categoryFilter.addEventListener('change', () => {
+            console.log('🎯 Category filter changed');
+            searchSkills();
+        });
+    }
+    
+    // Duration filter handler (if exists)
+    const durationFilter = document.getElementById('duration-filter');
+    if (durationFilter) {
+        durationFilter.addEventListener('change', () => {
+            console.log('⏰ Duration filter changed');
+            searchSkills();
+        });
+    }
+    
+    // Clear filters button (if exists)
+    const clearButton = document.getElementById('clear-filters');
+    if (clearButton) {
+        clearButton.addEventListener('click', () => {
+            console.log('🗑️ Clearing all filters');
+            clearFilters();
+        });
+    }
+    
+    console.log('✅ Filter handlers setup completed');
+}
+
+// ✅ ADD MISSING HELPER FUNCTIONS FOR SEARCH
+function setupSearchListeners() {
+    const searchInput = document.getElementById('skill-search');
+    const categoryFilter = document.getElementById('category-filter');
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', debounce(searchSkills, 300));
+    }
+    
+    if (categoryFilter) {
+        categoryFilter.addEventListener('change', searchSkills);
+    }
+}
+
+// ✅ ADD MISSING: SETUP SEARCH FUNCTIONALITY
+function setupSearchFunctionality() {
+    console.log('🔧 Setting up search functionality...');
+    
+    const searchInput = document.getElementById('skill-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', debounce((e) => {
+            const searchTerm = e.target.value.trim();
+            console.log('🔍 Searching skills for:', searchTerm);
+            performSkillsSearch(searchTerm);
+        }, 300));
+    }
+}
+
+// ✅ ADD MISSING: PERFORM SKILLS SEARCH
+function performSkillsSearch(searchTerm) {
+    if (!filteredSkills || filteredSkills.length === 0) {
+        console.log('No skills available to search');
+        return;
+    }
+    
+    let filtered = filteredSkills;
+    
+    if (searchTerm && searchTerm.length > 0) {
+        filtered = filteredSkills.filter(skill => {
+            const skillName = skill.name || '';
+            const providerName = skill.providerName || '';
+            const description = skill.description || '';
+            const category = skill.category || '';
+            
+            return skillName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                   providerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                   description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                   category.toLowerCase().includes(searchTerm.toLowerCase());
+        });
+    }
+    
+    console.log(`🔍 Search results: ${filtered.length} skills found`);
+    populateSkillsGrid(filtered);
+}
+
 // ✅ SETUP MESSAGE SENDING
 function setupMessageSending() {
     const sendBtn = document.getElementById('send-message-btn');
@@ -3804,17 +3902,27 @@ function updateOnlineUsersBadge() {
     }
 }
 
-// ✅ HELPER FUNCTION TO INITIALIZE MARKETPLACE COMPONENTS
+// ✅ FIXED: INITIALIZE MARKETPLACE COMPONENTS
 function initializeMarketplaceComponents() {
-    console.log('🔄 Initializing marketplace components...');
+    console.log('🔧 Initializing marketplace components...');
     
-    // Initialize all marketplace UI components
-    setTimeout(() => {
-        populateCategories();
-        setupSearchListeners();
-        setupFilterHandlers();
+    try {
+        // Setup filter handlers
+        if (typeof setupFilterHandlers === 'function') {
+            setupFilterHandlers();
+        } else {
+            console.warn('⚠️ setupFilterHandlers function not found');
+        }
+        
+        // Setup search functionality
+        if (typeof setupSearchFunctionality === 'function') {
+            setupSearchFunctionality();
+        }
+        
         console.log('✅ Marketplace components initialized');
-    }, 100);
+    } catch (error) {
+        console.error('❌ Error initializing marketplace components:', error);
+    }
 }
 // ✅ HELPER FUNCTION TO UPDATE RESULTS COUNT
 function updateResultsCount(count) {
