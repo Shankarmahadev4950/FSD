@@ -4159,8 +4159,7 @@ const OnlineStatusManager = {
     }
 };
 
-// ✅ FIXED: POPULATE SKILLS GRID WITH SAFE ONLINE STATUS MANAGER ACCESS
-// ✅ FIXED: POPULATE SKILLS GRID WITH COMPLETELY SAFE ONLINE STATUS ACCESS
+// ✅ ENHANCED: POPULATE SKILLS GRID WITH VIDEO CALL BUTTONS
 function populateSkillsGrid(skills) {
     const skillsGrid = document.getElementById('skills-grid');
     if (!skillsGrid) {
@@ -4185,7 +4184,7 @@ function populateSkillsGrid(skills) {
 
     console.log(`🔄 Rendering ${skills.length} skills in grid`);
 
-    // ✅ COMPLETELY SAFE FORMAT LAST SEEN FUNCTION
+    // ✅ SAFE FORMAT LAST SEEN FUNCTION
     const safeFormatLastSeen = (lastSeen) => {
         try {
             // Try to use OnlineStatusManager if available
@@ -4238,6 +4237,7 @@ function populateSkillsGrid(skills) {
 
         // ✅ SAFE SKILL ID FOR CLICK HANDLER
         const skillId = skill.id || skill._id || 'unknown';
+        const providerId = skill.providerId || skill.provider?._id || 'unknown';
 
         return `
         <div class="col-md-6 col-lg-4 mb-4">
@@ -4293,9 +4293,18 @@ function populateSkillsGrid(skills) {
                                 <span class="ms-1">${rating}</span>
                             </small>
                         </div>
-                        <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); requestExchange('${skillId}')">
-                            ${isOnline ? 'Exchange Now' : 'Request'}
-                        </button>
+                        <div class="btn-group">
+                            <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); requestExchange('${skillId}')">
+                                Exchange
+                            </button>
+                            <!-- ✅ ADD VIDEO CALL BUTTON -->
+                            <button class="btn btn-success btn-sm" 
+                                    onclick="event.stopPropagation(); startVideoCall('${skillId}', '${providerId}', '${providerName}')"
+                                    ${!currentUser ? 'disabled title="Please login to start video call"' : ''}
+                                    ${!isOnline ? 'disabled title="User is currently offline"' : ''}>
+                                <i class="fas fa-video me-1"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -4303,7 +4312,7 @@ function populateSkillsGrid(skills) {
         `;
     }).join('');
 
-    console.log('✅ Skills grid populated successfully');
+    console.log('✅ Skills grid populated successfully with video call buttons');
 }
 // ✅ ADD MISSING CSS FOR SKILLS GRID
 const skillsGridStyles = document.createElement('style');
