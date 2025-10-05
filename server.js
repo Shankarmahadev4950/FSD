@@ -126,21 +126,53 @@ if (wss) {
         ws.on('message', (message) => {
             try {
                 const data = JSON.parse(message);
+                console.log('📨 WebSocket message:', data.type);
                 
-                if (data.type === 'register') {
-                    // Register user connection
-                    activeConnections.set(data.userId, ws);
-                    console.log(`✅ WebSocket registered for user: ${data.userId}`);
-                }
-                
-                if (data.type === 'send_message') {
-                    // Deliver message or queue if offline
-                    deliverMessage(data);
-                }
-                
-                if (data.type === 'exchange_request') {
-                    // Notify recipient of exchange request
-                    notifyExchangeRequest(data);
+                // ✅ ENHANCED: Use switch statement for better message handling
+                switch (data.type) {
+                    case 'register':
+                        // Register user connection
+                        activeConnections.set(data.userId, ws);
+                        console.log(`✅ WebSocket registered for user: ${data.userId}`);
+                        break;
+                    
+                    case 'send_message':
+                        // Deliver message or queue if offline
+                        deliverMessage(data);
+                        break;
+                    
+                    case 'exchange_request':
+                        // Notify recipient of exchange request
+                        notifyExchangeRequest(data);
+                        break;
+                    
+                    // ✅ ADD VIDEO CALL MESSAGE HANDLERS
+                    case 'video_call_request':
+                        handleVideoCallRequest(data, ws);
+                        break;
+                    
+                    case 'video_call_answer':
+                        handleVideoCallAnswer(data, ws);
+                        break;
+                    
+                    case 'video_call_reject':
+                        handleVideoCallReject(data, ws);
+                        break;
+                    
+                    case 'video_call_end':
+                        handleVideoCallEnd(data, ws);
+                        break;
+                    
+                    case 'ice_candidate':
+                        handleICECandidate(data, ws);
+                        break;
+                    
+                    case 'video_call_timeout':
+                        handleVideoCallTimeout(data, ws);
+                        break;
+                    
+                    default:
+                        console.log('Unknown message type:', data.type);
                 }
             } catch (error) {
                 console.error('WebSocket message error:', error);
@@ -165,6 +197,117 @@ if (wss) {
     });
 }
 
+// ✅ ADD VIDEO CALL HANDLER FUNCTIONS TO server.js
+
+// Handle video call request
+function handleVideoCallRequest(data, ws) {
+    console.log('📞 Video call request:', data.callId, 'from:', data.recipientName, 'to:', data.recipientId);
+    
+    // Find recipient's WebSocket connection
+    const recipientWs = activeConnections.get(data.recipientId);
+    if (recipientWs && recipientWs.readyState === WebSocket.OPEN) {
+        // Forward the call request to the recipient
+        recipientWs.send(JSON.stringify({
+            type: 'video_call_request',
+            callId: data.callId,
+            skillId: data.skillId,
+            recipientId: data.recipientId, // This is actually the caller's ID for the recipient
+            recipientName: data.recipientName, // This is actually the caller's name
+            offer: data.offer,
+            timestamp: data.timestamp
+        }));
+        console.log(`✅ Call request forwarded to recipient: ${data.recipientId}`);
+    } else {
+        // Recipient is offline, notify caller
+        ws.send(JSON.stringify({
+            type: 'video_call_reject',
+            callId: data.callId,
+            reason: 'User is currently offline'
+        }));
+        console.log(`❌ Recipient offline: ${data.recipientId}`);
+    }
+}
+
+// Handle video call answer
+function handleVideoCallAnswer(data, ws) {
+    console.log('✅ Video call answer received for:', data.callId);
+    
+    // Find the original caller's WebSocket connection
+    // In a real implementation, you'd need to track call initiators
+    // For now, we'll broadcast to all connections (you should implement proper call tracking)
+    activeConnections.forEach((connection, userId) => {
+        if (connection !== ws && connection.readyState === WebSocket.OPEN) {
+            connection.send(JSON.stringify({
+                type: 'video_call_answer',
+                callId: data.callId,
+                answer: data.answer
+            }));
+        }
+    });
+}
+
+// Handle video call rejection
+function handleVideoCallReject(data, ws) {
+    console.log('❌ Video call rejected:', data.callId, data.reason);
+    
+    // Forward rejection to the original caller
+    activeConnections.forEach((connection, userId) => {
+        if (connection !== ws && connection.readyState === WebSocket.OPEN) {
+            connection.send(JSON.stringify({
+                type: 'video_call_reject',
+                callId: data.callId,
+                reason: data.reason
+            }));
+        }
+    });
+}
+
+// Handle video call end
+function handleVideoCallEnd(data, ws) {
+    console.log('📞 Video call ended:', data.callId, data.reason);
+    
+    // Notify the other participant
+    activeConnections.forEach((connection, userId) => {
+        if (connection !== ws && connection.readyState === WebSocket.OPEN) {
+            connection.send(JSON.stringify({
+                type: 'video_call_end',
+                callId: data.callId,
+                reason: data.reason
+            }));
+        }
+    });
+}
+
+// Handle ICE candidates
+function handleICECandidate(data, ws) {
+    console.log('🧊 ICE candidate for call:', data.callId);
+    
+    // Forward ICE candidate to the other participant
+    activeConnections.forEach((connection, userId) => {
+        if (connection !== ws && connection.readyState === WebSocket.OPEN) {
+            connection.send(JSON.stringify({
+                type: 'ice_candidate',
+                callId: data.callId,
+                candidate: data.candidate
+            }));
+        }
+    });
+}
+
+// Handle video call timeout
+function handleVideoCallTimeout(data, ws) {
+    console.log('⏰ Video call timeout:', data.callId);
+    
+    // Notify the other participant about timeout
+    activeConnections.forEach((connection, userId) => {
+        if (connection !== ws && connection.readyState === WebSocket.OPEN) {
+            connection.send(JSON.stringify({
+                type: 'video_call_timeout',
+                callId: data.callId
+            }));
+        }
+    });
+}
 // ✅ DYNAMIC RATINGS FROM FEEDBACK
 fastify.get('/api/users/:userId/rating', async (request, reply) => {
     try {
