@@ -3774,73 +3774,21 @@ function renderWeeklyStats() {
 }
 
 function loadSkillsMarketplace() {
-    console.log('🔄 Loading skills marketplace...');
-    
-    // Show loading state immediately
-    const skillsGrid = document.getElementById('skills-grid');
-    if (skillsGrid) {
-        skillsGrid.innerHTML = `
-            <div class="col-12">
-                <div class="text-center py-5">
-                    <div class="spinner-border text-primary mb-3" role="status">
-                        <span class="visually-hidden">Loading skills...</span>
-                    </div>
-                    <h5>Loading Skills Marketplace</h5>
-                    <p class="text-muted">Discover talented people in your community</p>
-                </div>
-            </div>`;
-    }
-    
-    // Always load fresh data from API
-    loadSkills().then(() => {
-        console.log('✅ Skills loaded successfully from API');
-        
-        // Double-check that skills are populated
-        if (filteredSkills && filteredSkills.length > 0) {
-            console.log(`✅ Displaying ${filteredSkills.length} skills in marketplace`);
-            populateSkillsGrid(filteredSkills);
-            updateResultsCount(filteredSkills.length);
-        } else {
-            console.log('⚠️ No skills available after loading');
-            showNoSkillsMessage();
-        }
-        
-    }).catch(error => {
-        console.error('❌ Failed to load skills from API:', error);
-        
-        // Show error state with retry option
-        if (skillsGrid) {
-            skillsGrid.innerHTML = `
-                <div class="col-12">
-                    <div class="text-center py-5">
-                        <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
-                        <h5>Unable to Load Skills</h5>
-                        <p class="text-muted mb-3">We couldn't load the skills marketplace. This might be due to:</p>
-                        <ul class="text-muted text-start mb-4" style="display: inline-block;">
-                            <li>Network connection issues</li>
-                            <li>Server temporarily unavailable</li>
-                            <li>Ad blocker preventing requests</li>
-                        </ul>
-                        <div class="d-flex gap-2 justify-content-center">
-                            <button class="btn btn-primary" onclick="loadSkillsMarketplace()">
-                                <i class="fas fa-redo me-2"></i>Try Again
-                            </button>
-                            <button class="btn btn-outline-secondary" onclick="showGetStartedModal()">
-                                <i class="fas fa-plus me-2"></i>Add Your Skill
-                            </button>
-                        </div>
-                    </div>
-                </div>`;
-        }
-    });
+    console.log('🎯 Loading skills marketplace...');
     
     // Initialize marketplace components
     initializeMarketplaceComponents();
     
-    // Update online users count badge
-    updateOnlineUsersBadge();
+    // Load skills
+    if (!filteredSkills || filteredSkills.length === 0) {
+        console.log('🔄 No filtered skills, loading fresh data...');
+        loadSkills();
+    } else {
+        console.log(`🔄 Using existing ${filteredSkills.length} skills`);
+        populateSkillsGrid(filteredSkills);
+    }
     
-    console.log('✅ Skills marketplace loading initiated');
+    populateCategories();
 }
 
 // ✅ HELPER FUNCTION TO UPDATE ONLINE USERS BADGE
@@ -4096,6 +4044,7 @@ const OnlineStatusManager = {
 };
 
 // ✅ FIXED: POPULATE SKILLS GRID WITH SAFE ONLINE STATUS MANAGER ACCESS
+// ✅ FIXED: POPULATE SKILLS GRID WITH COMPLETELY SAFE ONLINE STATUS ACCESS
 function populateSkillsGrid(skills) {
     const skillsGrid = document.getElementById('skills-grid');
     if (!skillsGrid) {
@@ -4120,31 +4069,34 @@ function populateSkillsGrid(skills) {
 
     console.log(`🔄 Rendering ${skills.length} skills in grid`);
 
-    // ✅ SAFE ONLINE STATUS MANAGER ACCESS
+    // ✅ COMPLETELY SAFE FORMAT LAST SEEN FUNCTION
     const safeFormatLastSeen = (lastSeen) => {
-        if (typeof OnlineStatusManager !== 'undefined' && OnlineStatusManager.formatLastSeen) {
-            return OnlineStatusManager.formatLastSeen(lastSeen);
+        try {
+            // Try to use OnlineStatusManager if available
+            if (window.OnlineStatusManager && typeof window.OnlineStatusManager.formatLastSeen === 'function') {
+                return window.OnlineStatusManager.formatLastSeen(lastSeen);
+            }
+        } catch (error) {
+            console.warn('OnlineStatusManager.formatLastSeen not available, using fallback');
         }
+        
         // Fallback formatting
         if (!lastSeen) return 'Never';
-        const now = new Date();
-        const lastSeenDate = new Date(lastSeen);
-        const diffMs = now - lastSeenDate;
-        const diffMins = Math.floor(diffMs / 60000);
-        const diffHours = Math.floor(diffMs / 3600000);
-        
-        if (diffMins < 1) return 'Just now';
-        if (diffMins < 60) return `${diffMins}m ago`;
-        if (diffHours < 24) return `${diffHours}h ago`;
-        return lastSeenDate.toLocaleDateString();
-    };
-
-    const safeGetStatusBadge = (isOnline, lastSeen) => {
-        if (isOnline) {
-            return '<span class="badge bg-success status-badge"><i class="fas fa-circle me-1"></i>Online</span>';
-        } else {
-            const lastSeenText = safeFormatLastSeen(lastSeen);
-            return `<span class="badge bg-secondary status-badge"><i class="fas fa-clock me-1"></i>${lastSeenText}</span>`;
+        try {
+            const now = new Date();
+            const lastSeenDate = new Date(lastSeen);
+            const diffMs = now - lastSeenDate;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+            
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            if (diffDays < 7) return `${diffDays}d ago`;
+            return lastSeenDate.toLocaleDateString();
+        } catch (e) {
+            return 'Recently';
         }
     };
 
@@ -4163,8 +4115,10 @@ function populateSkillsGrid(skills) {
                         (skill.provider?.isOnline || false);
         const lastSeen = skill.providerLastSeen || skill.provider?.lastSeen || new Date();
         
-        // ✅ SAFE STATUS BADGE USING OUR SAFE FUNCTION
-        const statusBadge = safeGetStatusBadge(isOnline, lastSeen);
+        // ✅ SAFE STATUS BADGE
+        const statusBadge = isOnline ? 
+            '<span class="badge bg-success status-badge"><i class="fas fa-circle me-1"></i>Online</span>' :
+            `<span class="badge bg-secondary status-badge"><i class="fas fa-clock me-1"></i>${safeFormatLastSeen(lastSeen)}</span>`;
 
         // ✅ SAFE SKILL ID FOR CLICK HANDLER
         const skillId = skill.id || skill._id || 'unknown';
@@ -4690,21 +4644,23 @@ async function initializeApp() {
     console.log('🚀 Initializing LocalLink app...');
     
     try {
-
         // Setup navigation and event listeners first
         setupNavigationHandlers();
         setupEventListeners();
         updateNavigationBadges();
         handlePageRefresh();
         
-        // Initialize Online Status Manager with error handling
+        // ✅ INITIALIZE ONLINE STATUS MANAGER FIRST
         try {
-            OnlineStatusManager.init();
+            if (typeof OnlineStatusManager !== 'undefined' && OnlineStatusManager.init) {
+                OnlineStatusManager.init();
+                console.log('✅ OnlineStatusManager initialized successfully');
+            }
         } catch (error) {
             console.warn('⚠️ OnlineStatusManager initialization warning:', error.message);
         }
         
-        // Check backend connection with better error handling
+        // Check backend connection
         try {
             const response = await fetch(`${API_BASE}/health`, { 
                 method: 'GET',
@@ -4719,10 +4675,6 @@ async function initializeApp() {
             }
         } catch (error) {
             console.error('❌ Backend server is not reachable:', error.message);
-            // Don't show notification if it's likely an ad blocker
-            if (!error.message.includes('Failed to fetch') && !error.message.includes('blocked')) {
-                NotificationManager.show('Backend server is not running. Please start the server.', 'error');
-            }
         }
         
         // Check existing session
@@ -4734,9 +4686,11 @@ async function initializeApp() {
                 ActivityTracker.initUserActivity();
                 startAutoSessionTracking();
                 
-                // ✅ CRITICAL: Mark user as online immediately after login
-                await OnlineStatusManager.setOnline();
-                console.log('✅ User marked as online after login');
+                // Mark user as online immediately after login
+                if (OnlineStatusManager && OnlineStatusManager.setOnline) {
+                    await OnlineStatusManager.setOnline();
+                    console.log('✅ User marked as online after login');
+                }
             } catch (error) {
                 console.warn('⚠️ Activity tracking initialization warning:', error.message);
             }
@@ -4749,7 +4703,7 @@ async function initializeApp() {
             showSection('landing');
         }
         
-        // ✅ NEW: INITIALIZE VIDEO CALL SYSTEM
+        // Initialize video call system
         try {
             initializeVideoCallSystem();
         } catch (error) {
@@ -4774,11 +4728,6 @@ async function initializeApp() {
         
     } catch (error) {
         console.error('❌ App initialization failed:', error);
-        // Don't show notification for common ad blocker issues
-        if (!error.message.includes('Failed to fetch') && !error.message.includes('blocked')) {
-            NotificationManager.show('Failed to initialize application', 'error');
-        }
-        
         // Still show the landing page even if initialization partially failed
         showSection('landing');
     }
