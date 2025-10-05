@@ -1115,67 +1115,83 @@ function renderCoursesCompleted(stats) {
 // ✅ ENHANCED SKILLS LOADING WITH ONLINE STATUS
 // ✅ ENHANCED SKILLS LOADING - WITH BETTER ERROR HANDLING
 async function loadSkills() {
+    console.log('🔄 Starting to load skills...');
+    
     try {
-        console.log('🔄 Loading skills from API...');
         const skills = await apiRequest('/skills');
+        console.log('📦 Skills received from API:', skills?.length || 0, 'skills');
         
-        // ✅ SAFE FILTERING WITH COMPREHENSIVE CHECKS
+        if (!skills || !Array.isArray(skills)) {
+            console.error('❌ Invalid skills data received:', skills);
+            throw new Error('Invalid skills data received from server');
+        }
+        
+        // Filter skills safely
         filteredSkills = skills.filter(skill => {
-            // Skip if skill is invalid
             if (!skill) return false;
-            
-            // Skip if skill is not active
             if (skill.isActive === false) return false;
-            
-            // Skip if no provider name
             if (!skill.providerName && !skill.provider?.name) return false;
-            
-            // Skip user's own skills
-            if (currentUser && skill.providerId === currentUser.id) return false;
-            if (currentUser && skill.provider?._id === currentUser.id) return false;
-            
+            if (currentUser && (skill.providerId === currentUser.id || skill.provider?._id === currentUser.id)) return false;
             return true;
         });
         
-        console.log(`✅ Loaded ${filteredSkills.length} skills after filtering`);
-
+        console.log(`✅ Filtered ${filteredSkills.length} skills`);
+        
         // Count online users
         const onlineUsersCount = filteredSkills.filter(skill => {
             return skill.providerOnline === true || skill.provider?.isOnline === true;
         }).length;
         
-        // Update notification badge with online users count
+        console.log(`👥 Online users: ${onlineUsersCount}`);
+        
+        // Update notification badge
         NotificationManager.showOnlineUsersCount(onlineUsersCount);
         
+        // Always update the skills grid if we're on the skills section
         if (currentSection === 'skills') {
+            console.log('🎯 Updating skills grid...');
             populateSkillsGrid(filteredSkills);
         }
+        
     } catch (error) {
-        console.error('❌ Failed to load skills from API:', error);
+        console.error('❌ Failed to load skills from API:', error.message);
         
-        // ✅ BETTER FALLBACK TO LOCAL DATA
-        console.log('🔄 Falling back to local skills data...');
-        filteredSkills = appData.availableSkills.filter(skill => {
-            if (!skill) return false;
-            if (currentUser && skill.providerId === currentUser.id) return false;
-            return true;
-        });
+        // Show fallback skills immediately
+        showFallbackSkills();
         
-        // Still count online users from fallback data
-        const onlineUsersCount = filteredSkills.filter(skill => 
-            skill.providerOnline === true
-        ).length;
-        
-        NotificationManager.showOnlineUsersCount(onlineUsersCount);
-        
-        if (currentSection === 'skills') {
-            populateSkillsGrid(filteredSkills);
+        // Show user-friendly error (but don't show for network errors to avoid spam)
+        if (!error.message.includes('Network') && !error.message.includes('timeout')) {
+            NotificationManager.show('Using demo skills data. ' + error.message, 'warning');
         }
-        
-        // Show user-friendly error message
-        NotificationManager.show('Using demo skills data. Server connection issue.', 'warning');
     }
 }
+
+// ✅ FALLBACK SKILLS FUNCTION
+function showFallbackSkills() {
+    console.log('🔄 Loading fallback skills data...');
+    
+    filteredSkills = appData.availableSkills.filter(skill => {
+        if (!skill) return false;
+        if (currentUser && skill.providerId === currentUser.id) return false;
+        return true;
+    });
+    
+    console.log(`📦 Loaded ${filteredSkills.length} fallback skills`);
+    
+    // Add online status to fallback data
+    filteredSkills.forEach(skill => {
+        skill.providerOnline = Math.random() > 0.5; // Random online status for demo
+        skill.providerLastSeen = new Date();
+    });
+    
+    const onlineUsersCount = filteredSkills.filter(skill => skill.providerOnline).length;
+    NotificationManager.showOnlineUsersCount(onlineUsersCount);
+    
+    if (currentSection === 'skills') {
+        populateSkillsGrid(filteredSkills);
+    }
+}
+
 // In app.js, change these:
 async function registerUser(userData) {
     return apiRequest('/auth/register', {  // Changed from /users/register
@@ -3902,6 +3918,184 @@ function stopMessagePolling() {
     }
 }
 
+// ✅ COMPLETE ONLINE STATUS MANAGER
+const OnlineStatusManager = {
+    heartbeatInterval: null,
+    isInitialized: false,
+    lastHeartbeatTime: 0,
+    heartbeatCooldown: 30000,
+    
+    init: function() {
+        if (this.isInitialized) return;
+        
+        console.log('🔄 Initializing Online Status Manager...');
+        this.setupEventListeners();
+        this.startHeartbeat();
+        this.isInitialized = true;
+        
+        if (currentUser) {
+            this.forceOnline();
+        }
+    },
+    
+    forceOnline: async function() {
+        if (!currentUser) return;
+        console.log('🚀 Force setting user online...');
+        await this.setOnline();
+    },
+    
+    setOnline: async function() {
+        if (!currentUser) return;
+        try {
+            console.log('🔄 Setting user online...');
+            const response = await apiRequest('/users/online', {
+                method: 'POST'
+            });
+            if (response && response.success) {
+                console.log('✅ Online status set successfully');
+                return true;
+            }
+        } catch (error) {
+            console.error('❌ Failed to set online status:', error);
+        }
+        return false;
+    },
+    
+    setOffline: async function() {
+        if (!currentUser) return;
+        try {
+            const response = await apiRequest('/users/offline', {
+                method: 'POST'
+            });
+            if (response && response.success) {
+                console.log('✅ User marked as offline successfully');
+            }
+        } catch (error) {
+            console.error('❌ Failed to set offline status:', error);
+        }
+    },
+    
+    sendHeartbeat: async function() {
+        if (!currentUser) return;
+        const now = Date.now();
+        if (now - this.lastHeartbeatTime < this.heartbeatCooldown) return;
+        
+        this.lastHeartbeatTime = now;
+        try {
+            console.log('💓 Sending heartbeat...');
+            const response = await apiRequest('/users/heartbeat', {
+                method: 'POST'
+            });
+            if (response && response.success) {
+                console.log('✅ Heartbeat successful');
+            }
+        } catch (error) {
+            console.error('❌ Heartbeat failed:', error);
+        }
+    },
+    
+    startHeartbeat: function() {
+        if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+        this.heartbeatInterval = setInterval(() => {
+            if (currentUser && document.visibilityState === 'visible') {
+                this.sendHeartbeat();
+            }
+        }, 30000);
+    },
+    
+    stopHeartbeat: function() {
+        if (this.heartbeatInterval) {
+            clearInterval(this.heartbeatInterval);
+            this.heartbeatInterval = null;
+        }
+    },
+    
+    formatLastSeen: function(lastSeen) {
+        if (!lastSeen) return 'Never';
+        const now = new Date();
+        const lastSeenDate = new Date(lastSeen);
+        const diffMs = now - lastSeenDate;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+        
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins}m ago`;
+        if (diffHours < 24) return `${diffHours}h ago`;
+        if (diffDays < 7) return `${diffDays}d ago`;
+        return lastSeenDate.toLocaleDateString();
+    },
+    
+    getStatusBadge: function(isOnline, lastSeen) {
+        if (isOnline) {
+            return '<span class="badge bg-success status-badge"><i class="fas fa-circle me-1"></i>Online</span>';
+        } else {
+            const lastSeenText = this.formatLastSeen(lastSeen);
+            return `<span class="badge bg-secondary status-badge"><i class="fas fa-clock me-1"></i>${lastSeenText}</span>`;
+        }
+    },
+    
+    setupEventListeners: function() {
+        document.addEventListener('visibilitychange', () => {
+            if (!currentUser) return;
+            if (!document.hidden) {
+                this.setOnline();
+                this.sendHeartbeat();
+            } else {
+                this.setOffline();
+            }
+        });
+        
+        const throttledHeartbeat = this.throttle(() => {
+            if (currentUser && document.visibilityState === 'visible') {
+                this.sendHeartbeat();
+            }
+        }, 10000);
+        
+        const activityEvents = ['mousedown', 'keypress', 'scroll', 'touchstart'];
+        activityEvents.forEach(event => {
+            document.addEventListener(event, throttledHeartbeat, { passive: true });
+        });
+        
+        window.addEventListener('focus', () => {
+            if (currentUser) this.setOnline();
+        });
+        
+        window.addEventListener('online', () => {
+            console.log('🌐 Browser online - marking online');
+            if (currentUser) this.setOnline();
+        });
+        
+        window.addEventListener('offline', () => {
+            console.log('🌐 Browser offline - marking offline');
+            if (currentUser) this.setOffline();
+        });
+        
+        window.addEventListener('beforeunload', () => {
+            if (currentUser) {
+                console.log('🚪 Page unloading - marking offline');
+                this.setOffline();
+            }
+        });
+        
+        console.log('✅ Online status event listeners setup complete');
+    },
+    
+    throttle: function(func, limit) {
+        let inThrottle;
+        return function() {
+            const args = arguments;
+            const context = this;
+            if (!inThrottle) {
+                func.apply(context, args);
+                inThrottle = true;
+                setTimeout(() => inThrottle = false, limit);
+            }
+        }
+    }
+};
+
+// ✅ FIXED: POPULATE SKILLS GRID WITH SAFE ONLINE STATUS MANAGER ACCESS
 function populateSkillsGrid(skills) {
     const skillsGrid = document.getElementById('skills-grid');
     if (!skillsGrid) {
@@ -3926,6 +4120,34 @@ function populateSkillsGrid(skills) {
 
     console.log(`🔄 Rendering ${skills.length} skills in grid`);
 
+    // ✅ SAFE ONLINE STATUS MANAGER ACCESS
+    const safeFormatLastSeen = (lastSeen) => {
+        if (typeof OnlineStatusManager !== 'undefined' && OnlineStatusManager.formatLastSeen) {
+            return OnlineStatusManager.formatLastSeen(lastSeen);
+        }
+        // Fallback formatting
+        if (!lastSeen) return 'Never';
+        const now = new Date();
+        const lastSeenDate = new Date(lastSeen);
+        const diffMs = now - lastSeenDate;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins}m ago`;
+        if (diffHours < 24) return `${diffHours}h ago`;
+        return lastSeenDate.toLocaleDateString();
+    };
+
+    const safeGetStatusBadge = (isOnline, lastSeen) => {
+        if (isOnline) {
+            return '<span class="badge bg-success status-badge"><i class="fas fa-circle me-1"></i>Online</span>';
+        } else {
+            const lastSeenText = safeFormatLastSeen(lastSeen);
+            return `<span class="badge bg-secondary status-badge"><i class="fas fa-clock me-1"></i>${lastSeenText}</span>`;
+        }
+    };
+
     skillsGrid.innerHTML = skills.map(skill => {
         // ✅ SAFE DATA ACCESS WITH COMPREHENSIVE FALLBACKS
         const skillName = skill.name || 'Unnamed Skill';
@@ -3941,10 +4163,8 @@ function populateSkillsGrid(skills) {
                         (skill.provider?.isOnline || false);
         const lastSeen = skill.providerLastSeen || skill.provider?.lastSeen || new Date();
         
-        // ✅ SAFE STATUS BADGE
-        const statusBadge = isOnline ? 
-            '<span class="badge bg-success status-badge"><i class="fas fa-circle me-1"></i>Online</span>' :
-            `<span class="badge bg-secondary status-badge"><i class="fas fa-clock me-1"></i>${OnlineStatusManager.formatLastSeen(lastSeen)}</span>`;
+        // ✅ SAFE STATUS BADGE USING OUR SAFE FUNCTION
+        const statusBadge = safeGetStatusBadge(isOnline, lastSeen);
 
         // ✅ SAFE SKILL ID FOR CLICK HANDLER
         const skillId = skill.id || skill._id || 'unknown';
@@ -3982,7 +4202,7 @@ function populateSkillsGrid(skills) {
                                     <div class="status-text small mt-1">
                                         ${isOnline ? 
                                             '<span class="text-success"><i class="fas fa-circle me-1"></i>Online now</span>' : 
-                                            `<span class="text-muted"><i class="fas fa-clock me-1"></i>Last seen ${OnlineStatusManager.formatLastSeen(lastSeen)}</span>`
+                                            `<span class="text-muted"><i class="fas fa-clock me-1"></i>Last seen ${safeFormatLastSeen(lastSeen)}</span>`
                                         }
                                     </div>
                                 </div>
@@ -4015,7 +4235,6 @@ function populateSkillsGrid(skills) {
 
     console.log('✅ Skills grid populated successfully');
 }
-
 // ✅ ADD MISSING CSS FOR SKILLS GRID
 const skillsGridStyles = document.createElement('style');
 skillsGridStyles.textContent = `
@@ -4434,182 +4653,7 @@ function clearFilters() {
 // Update the clearSearch function to use clearFilters
 window.clearSearch = clearFilters;
 
-// ✅ COMPLETE ONLINE STATUS MANAGER
-const OnlineStatusManager = {
-    heartbeatInterval: null,
-    isInitialized: false,
-    lastHeartbeatTime: 0,
-    heartbeatCooldown: 30000,
-    
-    init: function() {
-        if (this.isInitialized) return;
-        
-        console.log('🔄 Initializing Online Status Manager...');
-        this.setupEventListeners();
-        this.startHeartbeat();
-        this.isInitialized = true;
-        
-        if (currentUser) {
-            this.forceOnline();
-        }
-    },
-    
-    forceOnline: async function() {
-        if (!currentUser) return;
-        console.log('🚀 Force setting user online...');
-        await this.setOnline();
-    },
-    
-    setOnline: async function() {
-        if (!currentUser) return;
-        try {
-            console.log('🔄 Setting user online...');
-            const response = await apiRequest('/users/online', {
-                method: 'POST'
-            });
-            if (response && response.success) {
-                console.log('✅ Online status set successfully');
-                return true;
-            }
-        } catch (error) {
-            console.error('❌ Failed to set online status:', error);
-        }
-        return false;
-    },
-    
-    setOffline: async function() {
-        if (!currentUser) return;
-        try {
-            const response = await apiRequest('/users/offline', {
-                method: 'POST'
-            });
-            if (response && response.success) {
-                console.log('✅ User marked as offline successfully');
-            }
-        } catch (error) {
-            console.error('❌ Failed to set offline status:', error);
-        }
-    },
-    
-    sendHeartbeat: async function() {
-        if (!currentUser) return;
-        const now = Date.now();
-        if (now - this.lastHeartbeatTime < this.heartbeatCooldown) return;
-        
-        this.lastHeartbeatTime = now;
-        try {
-            console.log('💓 Sending heartbeat...');
-            const response = await apiRequest('/users/heartbeat', {
-                method: 'POST'
-            });
-            if (response && response.success) {
-                console.log('✅ Heartbeat successful');
-            }
-        } catch (error) {
-            console.error('❌ Heartbeat failed:', error);
-        }
-    },
-    
-    startHeartbeat: function() {
-        if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
-        this.heartbeatInterval = setInterval(() => {
-            if (currentUser && document.visibilityState === 'visible') {
-                this.sendHeartbeat();
-            }
-        }, 30000);
-    },
-    
-    stopHeartbeat: function() {
-        if (this.heartbeatInterval) {
-            clearInterval(this.heartbeatInterval);
-            this.heartbeatInterval = null;
-        }
-    },
-    
-    formatLastSeen: function(lastSeen) {
-        if (!lastSeen) return 'Never';
-        const now = new Date();
-        const lastSeenDate = new Date(lastSeen);
-        const diffMs = now - lastSeenDate;
-        const diffMins = Math.floor(diffMs / 60000);
-        const diffHours = Math.floor(diffMs / 3600000);
-        const diffDays = Math.floor(diffMs / 86400000);
-        
-        if (diffMins < 1) return 'Just now';
-        if (diffMins < 60) return `${diffMins}m ago`;
-        if (diffHours < 24) return `${diffHours}h ago`;
-        if (diffDays < 7) return `${diffDays}d ago`;
-        return lastSeenDate.toLocaleDateString();
-    },
-    
-    getStatusBadge: function(isOnline, lastSeen) {
-        if (isOnline) {
-            return '<span class="badge bg-success status-badge"><i class="fas fa-circle me-1"></i>Online</span>';
-        } else {
-            const lastSeenText = this.formatLastSeen(lastSeen);
-            return `<span class="badge bg-secondary status-badge"><i class="fas fa-clock me-1"></i>${lastSeenText}</span>`;
-        }
-    },
-    
-    setupEventListeners: function() {
-        document.addEventListener('visibilitychange', () => {
-            if (!currentUser) return;
-            if (!document.hidden) {
-                this.setOnline();
-                this.sendHeartbeat();
-            } else {
-                this.setOffline();
-            }
-        });
-        
-        const throttledHeartbeat = this.throttle(() => {
-            if (currentUser && document.visibilityState === 'visible') {
-                this.sendHeartbeat();
-            }
-        }, 10000);
-        
-        const activityEvents = ['mousedown', 'keypress', 'scroll', 'touchstart'];
-        activityEvents.forEach(event => {
-            document.addEventListener(event, throttledHeartbeat, { passive: true });
-        });
-        
-        window.addEventListener('focus', () => {
-            if (currentUser) this.setOnline();
-        });
-        
-        window.addEventListener('online', () => {
-            console.log('🌐 Browser online - marking online');
-            if (currentUser) this.setOnline();
-        });
-        
-        window.addEventListener('offline', () => {
-            console.log('🌐 Browser offline - marking offline');
-            if (currentUser) this.setOffline();
-        });
-        
-        window.addEventListener('beforeunload', () => {
-            if (currentUser) {
-                console.log('🚪 Page unloading - marking offline');
-                this.setOffline();
-            }
-        });
-        
-        console.log('✅ Online status event listeners setup complete');
-    },
-    
-    throttle: function(func, limit) {
-        let inThrottle;
-        return function() {
-            const args = arguments;
-            const context = this;
-            if (!inThrottle) {
-                func.apply(context, args);
-                inThrottle = true;
-                setTimeout(() => inThrottle = false, limit);
-            }
-        }
-    }
-};
+
 // ✅ HELPER FUNCTIONS FOR UI
 function formatDate(dateString) {
     const options = { year: 'numeric', month: 'short', day: 'numeric' };
