@@ -400,11 +400,13 @@ const NotificationManager = {
     }
 };
     // Only show notifications for online users count
-    showOnlineUsersCount: function(count) {
-        this.onlineUsersCount = count;
+ showOnlineUsersCount: function(count) {
+    this.onlineUsersCount = typeof count === 'number' ? count : 0;
+    if (typeof this.updateNavigationBadges === 'function') {
         this.updateNavigationBadges();
-    },
-    
+    }
+},
+
     // Update navigation badges with online users count
     updateNavigationBadges: function() {
         const skillsBadge = document.getElementById('skills-badge');
