@@ -817,29 +817,22 @@
         </div>
     </div>
 </div>
-<!-- Dashboard Section -->
-<div id="dashboard-section" class="section d-none">
+    <!-- Dashboard Section -->
+<div id="dashboard-section" class="d-none">
     <div class="container mt-5 pt-4">
-        <!-- Dashboard Header -->
+        <!-- Welcome Header -->
         <div class="row mb-4">
             <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h2 class="text-primary mb-0">
-                        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
-                    </h2>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-outline-primary btn-sm" id="view-activity-btn">
-                            <i class="fas fa-chart-line me-2"></i>View Activity
-                        </button>
-                        <button class="btn btn-primary btn-sm" onclick="showGetStartedModal()">
-                            <i class="fas fa-plus me-2"></i>Add Skills
-                        </button>
+                <div class="card hero-card card--interactive" style="background: #0075f2 !important; color: rgb(255, 255, 255) !important; border: 2px solid #e9ecef !important; border-radius: 12px !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;">
+                    <div class="card-body p-4">
+                        <h2 class="mb-2" style="color: rgb(255, 253, 253) !important; font-weight: 700 !important;">Welcome back, <span id="dashboard-user-name" style="color: #ffffff !important;">Shankar Mahadev</span>!</h2>
+                        <p class="mb-0 opacity-75" style="color: black !important;">Here's what's happening in your LocalLink community</p>
                     </div>
                 </div>
-                <p class="text-muted mb-0">Welcome back, <span id="dashboard-user-name">User</span>!</p>
             </div>
         </div>
-        
+
+
              <!-- Stats Cards -->
         <div class="row g-4 mb-4">
             <div class="col-lg-3 col-md-6 scroll-reveal">
@@ -887,36 +880,33 @@
                 </div>
             </div>
         </div>
+         <!-- Quick Actions -->
         <div class="row mb-4">
             <div class="col-12">
-                <div class="card">
-                    <div class="card-header bg-white">
-                        <h5 class="mb-0">Quick Actions</h5>
+                <div class="feature-card card card--interactive" style="background: white !important; color: black !important; border: 2px solid #e9ecef !important; border-radius: 12px !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;">
+                    <div class="card-header" style="background: #f8f9fa !important; border-bottom: 2px solid #e9ecef !important;">
+                        <h4 class="card-heading mb-0" style="color: black !important; font-weight: 700 !important;">Quick Actions</h4>
                     </div>
                     <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-3 col-6 mb-3">
-                                <button class="btn btn-outline-primary w-100 h-100 py-3" id="browse-skills-btn">
-                                    <i class="fas fa-search fa-2x mb-2"></i><br>
-                                    Browse Skills
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <button class="btn w-100" id="browse-skills-btn" style="background: #0075f2 !important; color: white !important; border: 2px solid #20c997 !important; border-radius: 10px !important; padding: 15px !important; font-weight: 600 !important; font-size: 1.1rem !important; box-shadow: 0 4px 8px rgba(32, 201, 151, 0.3) !important;">
+                                    <i class="fas fa-search me-2"></i>Browse Skills
                                 </button>
                             </div>
-                            <div class="col-md-3 col-6 mb-3">
-                                <button class="btn btn-outline-success w-100 h-100 py-3" id="manage-profile-btn">
-                                    <i class="fas fa-user-edit fa-2x mb-2"></i><br>
-                                    Manage Profile
+                            <div class="col-md-3">
+                                <button class="btn w-100" id="manage-profile-btn" style="background: #0075f2 !important; color: white !important; border: 2px solid #20c997 !important; border-radius: 10px !important; padding: 15px !important; font-weight: 600 !important; font-size: 1.1rem !important; box-shadow: 0 4px 8px rgba(32, 201, 151, 0.3) !important;">
+                                    <i class="fas fa-user-edit me-2"></i>Manage Profile
                                 </button>
                             </div>
-                            <div class="col-md-3 col-6 mb-3">
-                                <button class="btn btn-outline-info w-100 h-100 py-3" id="add-skills-btn">
-                                    <i class="fas fa-plus-circle fa-2x mb-2"></i><br>
-                                    Add Skills
+                            <div class="col-md-3">
+                                <button class="btn w-100" id="view-activity-btn" style="background: #0075f2 !important; color: white !important; border: 2px solid #20c997 !important; border-radius: 10px !important; padding: 15px !important; font-weight: 600 !important; font-size: 1.1rem !important; box-shadow: 0 4px 8px rgba(32, 201, 151, 0.3) !important;">
+                                    <i class="fas fa-chart-line me-2"></i>View Activity
                                 </button>
                             </div>
-                            <div class="col-md-3 col-6 mb-3">
-                                <button class="btn btn-outline-warning w-100 h-100 py-3" id="view-activity-btn">
-                                    <i class="fas fa-chart-line fa-2x mb-2"></i><br>
-                                    View Activity
+                            <div class="col-md-3">
+                                <button class="btn w-100" id="add-skills-btn" style="background: #0075f2 !important; color: white !important; border: 2px solid #20c997 !important; border-radius: 10px !important; padding: 15px !important; font-weight: 600 !important; font-size: 1.1rem !important; box-shadow: 0 4px 8px rgba(32, 201, 151, 0.3) !important;">
+                                    <i class="fas fa-plus me-2"></i>Add Skills
                                 </button>
                             </div>
                         </div>
@@ -925,93 +915,36 @@
             </div>
         </div>
  <!-- Content Sections -->
-      <div class="row">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header bg-white">
-                        <ul class="nav nav-tabs card-header-tabs" id="dashboardTabs" role="tablist">
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link active" id="pending-tab" data-bs-toggle="tab" 
-                                        data-bs-target="#pending-content" type="button" role="tab">
-                                    <i class="fas fa-clock me-2"></i>Pending Requests
-                                    <span class="badge bg-warning ms-2" id="pending-count">0</span>
-                                </button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="chats-tab" data-bs-toggle="tab" 
-                                        data-bs-target="#chats-content" type="button" role="tab">
-                                    <i class="fas fa-comments me-2"></i>Chat Sessions
-                                    <span class="badge bg-info ms-2" id="chats-count">0</span>
-                                </button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="activity-tab" data-bs-toggle="tab" 
-                                        data-bs-target="#activity-content" type="button" role="tab">
-                                    <i class="fas fa-chart-line me-2"></i>Activity
-                                </button>
-                            </li>
-                        </ul>
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="skill-card card card--interactive" style="background: white !important; color: black !important; border: 2px solid #e9ecef !important; border-radius: 12px !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;">
+                    <div class="card-header" style="background: #f8f9fa !important; border-bottom: 2px solid #e9ecef !important;">
+                        <h5 class="card-heading mb-0" style="color: black !important; font-weight: 700 !important;">Available Skills in Your Area</h5>
                     </div>
                     <div class="card-body">
-                        <div class="tab-content" id="dashboardTabsContent">
-                            
-                            <!-- Pending Requests Tab -->
-                            <div class="tab-pane fade show active" id="pending-content" role="tabpanel">
-                                <div id="pending-requests-section">
-                                    <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <h5 class="mb-0">Pending Exchange Requests</h5>
-                                        <button class="btn btn-sm btn-outline-primary" onclick="loadPendingRequests()">
-                                            <i class="fas fa-sync-alt"></i>
-                                        </button>
-                                    </div>
-                                    <div id="pending-requests-list">
-                                        <div class="text-center py-5">
-                                            <i class="fas fa-clock fa-3x text-muted mb-3"></i>
-                                            <h5>No Pending Requests</h5>
-                                            <p class="text-muted">You don't have any pending exchange requests yet.</p>
-                                            <button class="btn btn-primary" onclick="showSection('skills')">
-                                                Browse Skills
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
- <!-- Chat Sessions Tab -->
-                            <div class="tab-pane fade" id="chats-content" role="tabpanel">
-                                <div id="chat-sessions-section">
-                                    <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <h5 class="mb-0">Active Chat Sessions</h5>
-                                        <button class="btn btn-sm btn-outline-primary" onclick="loadChatSessions()">
-                                            <i class="fas fa-sync-alt"></i>
-                                        </button>
-                                    </div>
-                                    <div id="chat-sessions-list">
-                                        <div class="text-center py-5">
-                                            <i class="fas fa-comments fa-3x text-muted mb-3"></i>
-                                            <h5>No Active Chats</h5>
-                                            <p class="text-muted">Start a conversation by requesting a skill exchange.</p>
-                                            <button class="btn btn-primary" onclick="showSection('skills')">
-                                                Start Chatting
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Activity Tab -->
-                            <div class="tab-pane fade" id="activity-content" role="tabpanel">
-                                <!-- Activity content will be loaded here -->
-                                <div id="dashboard-activity-content">
-                                    <div class="text-center py-5">
-                                        <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
-                                        <h5>Activity Overview</h5>
-                                        <p class="text-muted">Your learning activity and progress will appear here.</p>
-                                        <button class="btn btn-primary" onclick="toggleActivityView()">
-                                            View Full Activity
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                        <div id="dashboard-skills-list">
+                            <!-- Skills will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="feature-card card card--interactive" style="background: white !important; color: black !important; border: 2px solid #e9ecef !important; border-radius: 12px !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;">
+                    <div class="card-header" style="background: #f8f9fa !important; border-bottom: 2px solid #e9ecef !important;">
+                        <h5 class="card-heading mb-0" style="color: black !important; font-weight: 700 !important;">Community Highlights</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-4" style="border-left: 4px solid #20c997 !important; padding-left: 15px !important;">
+                            <strong style="color: #20c997 !important; font-weight: 700 !important;">Top Skill Provider</strong><br>
+                            <small style="color: black !important; font-weight: 600 !important;">David Kim - 41 tokens</small>
+                        </div>
+                        <div class="mb-4" style="border-left: 4px solid #20c997 !important; padding-left: 15px !important;">
+                            <strong style="color: #20c997 !important; font-weight: 700 !important;">Most Popular Skills</strong><br>
+                            <small style="color: black !important; font-weight: 600 !important;">Guitar Lessons & Cooking</small>
+                        </div>
+                        <div style="border-left: 4px solid #20c997 !important; padding-left: 15px !important;">
+                            <strong style="color: #20c997 !important; font-weight: 700 !important;">Community Growth</strong><br>
+                            <small style="color: black !important; font-weight: 600 !important;">5 active members</small>
                         </div>
                     </div>
                 </div>
@@ -1019,6 +952,7 @@
         </div>
     </div>
 </div>
+
 <div id="skills-section" class="d-none">
     <div class="container mt-5 pt-4">
         <div class="row mb-4">
