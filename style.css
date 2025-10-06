@@ -1934,3 +1934,77 @@ html {
         max-width: 85%;
     }
 }
+/* Add this to your existing CSS */
+.card {
+    border: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.stat-label {
+    font-size: 0.875rem;
+}
+
+.activity-bars {
+    padding: 20px 0;
+}
+
+.bar-container {
+    transition: transform 0.2s ease;
+}
+
+.bar-container:hover {
+    transform: translateY(-5px);
+}
+
+.bar {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    border-radius: 4px 4px 0 0;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.bar:hover {
+    opacity: 0.8;
+}
+
+.bar-label {
+    font-weight: 500;
+}
+
+.skill-progress-item {
+    padding: 10px 0;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.skill-progress-item:last-child {
+    border-bottom: none;
+}
+
+.progress {
+    background-color: #e9ecef;
+    border-radius: 10px;
+}
+
+.progress-bar {
+    border-radius: 10px;
+    transition: width 0.6s ease;
+}
+
+#recent-activity .list-group-item {
+    border: none;
+    padding: 15px 0;
+}
+
+#recent-activity .list-group-item:not(:last-child) {
+    border-bottom: 1px solid #f8f9fa;
+}
