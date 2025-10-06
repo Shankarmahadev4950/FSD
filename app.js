@@ -5164,38 +5164,92 @@ let pendingRequests = {
 
 // ✅ LOAD PENDING REQUESTS
 async function loadPendingRequests() {
-    if (!currentUser) {
-        console.log('User not logged in, cannot load pending requests');
-        return;
-    }
-
     try {
         console.log('🔄 Loading pending requests...');
         
-        // Load incoming requests (requests to learn your skills)
-        const incomingResponse = await apiRequest('/exchanges/incoming');
-        if (incomingResponse && incomingResponse.exchanges) {
-            pendingRequests.incoming = incomingResponse.exchanges;
-        }
-
-        // Load outgoing requests (your requests to learn others' skills)
-        const outgoingResponse = await apiRequest('/exchanges/outgoing');
-        if (outgoingResponse && outgoingResponse.exchanges) {
-            pendingRequests.outgoing = outgoingResponse.exchanges;
-        }
-
-        console.log(`✅ Loaded ${pendingRequests.incoming.length} incoming and ${pendingRequests.outgoing.length} outgoing requests`);
+        const response = await apiRequest('/exchanges/user/pending');
+        const requests = response.exchanges || [];
         
-        // Update UI
-        renderPendingRequests();
-        updateRequestsBadge();
-
+        const container = document.getElementById('pending-requests-list');
+        const countBadge = document.getElementById('pending-count');
+        
+        if (countBadge) {
+            countBadge.textContent = requests.length;
+        }
+        
+        if (!container) {
+            console.error('Pending requests container not found');
+            return;
+        }
+        
+        if (requests.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="fas fa-clock fa-3x text-muted mb-3"></i>
+                    <h5>No Pending Requests</h5>
+                    <p class="text-muted">You don't have any pending exchange requests yet.</p>
+                    <button class="btn btn-primary" onclick="showSection('skills')">
+                        Browse Skills
+                    </button>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = requests.map(request => `
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h6 class="card-title mb-1">${request.skill?.name || 'Unknown Skill'}</h6>
+                            <p class="card-text text-muted small mb-2">
+                                ${request.type === 'sent' ? 
+                                    `To: ${request.provider?.name || 'User'}` : 
+                                    `From: ${request.learner?.name || 'User'}`
+                                }
+                            </p>
+                            <small class="text-muted">
+                                <i class="fas fa-clock me-1"></i>
+                                Requested ${formatTimeAgo(request.createdAt)}
+                            </small>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="btn-group">
+                                ${request.type === 'received' ? `
+                                    <button class="btn btn-success btn-sm" onclick="acceptExchangeRequest('${request._id}')">
+                                        <i class="fas fa-check me-1"></i>Accept
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" onclick="rejectExchangeRequest('${request._id}')">
+                                        <i class="fas fa-times me-1"></i>Reject
+                                    </button>
+                                ` : `
+                                    <span class="badge bg-warning">Pending</span>
+                                    <button class="btn btn-outline-danger btn-sm" onclick="cancelExchangeRequest('${request._id}')">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                `}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        
+        console.log(`✅ Loaded ${requests.length} pending requests`);
+        
     } catch (error) {
         console.error('❌ Error loading pending requests:', error);
-        NotificationManager.show('Failed to load pending requests', 'error');
+        const container = document.getElementById('pending-requests-list');
+        if (container) {
+            container.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Failed to load pending requests. Please try again.
+                </div>
+            `;
+        }
     }
 }
-
 // ✅ RENDER PENDING REQUESTS
 function renderPendingRequests() {
     renderIncomingRequests();
@@ -5316,53 +5370,62 @@ function renderOutgoingRequests() {
     `).join('');
 }
 
-// ✅ ACCEPT EXCHANGE REQUEST
+// ✅ EXCHANGE REQUEST ACTIONS
 async function acceptExchangeRequest(exchangeId) {
     try {
-        console.log('🔄 Accepting exchange request:', exchangeId);
-        
         const response = await apiRequest(`/exchanges/${exchangeId}/accept`, {
             method: 'PATCH'
         });
-
-        if (response && response.exchange) {
-            NotificationManager.show('Exchange request accepted! You can now start the session.', 'success');
-            
-            // Reload requests
-            await loadPendingRequests();
-            
-            // Optionally navigate to chat sessions
-            showSection('chat-sessions');
-        }
+        
+        NotificationManager.show('Exchange request accepted!', 'success');
+        loadPendingRequests();
+        
     } catch (error) {
-        console.error('❌ Error accepting exchange request:', error);
-        NotificationManager.show('Failed to accept request: ' + error.message, 'error');
+        console.error('Error accepting exchange:', error);
+        NotificationManager.show('Failed to accept exchange: ' + error.message, 'error');
     }
 }
 
-// ✅ REJECT EXCHANGE REQUEST
 async function rejectExchangeRequest(exchangeId) {
-    if (!confirm('Are you sure you want to reject this exchange request?')) {
-        return;
-    }
-
     try {
-        console.log('🔄 Rejecting exchange request:', exchangeId);
-        
         const response = await apiRequest(`/exchanges/${exchangeId}/reject`, {
             method: 'PATCH'
         });
-
-        if (response && response.exchange) {
-            NotificationManager.show('Exchange request rejected.', 'info');
-            
-            // Reload requests
-            await loadPendingRequests();
-        }
+        
+        NotificationManager.show('Exchange request rejected', 'info');
+        loadPendingRequests();
+        
     } catch (error) {
-        console.error('❌ Error rejecting exchange request:', error);
-        NotificationManager.show('Failed to reject request: ' + error.message, 'error');
+        console.error('Error rejecting exchange:', error);
+        NotificationManager.show('Failed to reject exchange: ' + error.message, 'error');
     }
+}
+// ✅ OPEN CHAT SESSION
+function openChatSession(skillId, userName) {
+    // Find the skill and open messaging
+    const skill = filteredSkills.find(s => s.id === skillId);
+    if (skill) {
+        showMessagingUI(skill);
+    } else {
+        NotificationManager.show('Could not open chat session', 'error');
+    }
+}
+// ✅ FORMAT TIME AGO
+function formatTimeAgo(timestamp) {
+    if (!timestamp) return 'Recently';
+    
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
 }
 
 // ✅ CANCEL EXCHANGE REQUEST (for outgoing requests)
@@ -5391,31 +5454,86 @@ async function cancelExchangeRequest(exchangeId) {
 }
 // ✅ LOAD CHAT SESSIONS
 async function loadChatSessions() {
-    if (!currentUser) {
-        console.log('User not logged in, cannot load chat sessions');
-        return;
-    }
-
     try {
         console.log('🔄 Loading chat sessions...');
         
-        // Load chat sessions (accepted exchanges with messages)
-        const response = await apiRequest('/exchanges/accepted');
-        if (response && response.exchanges) {
-            chatSessions = response.exchanges;
-            console.log(`✅ Loaded ${chatSessions.length} chat sessions`);
+        // Get recent messages to determine active chats
+        const response = await apiRequest('/messages/recent');
+        const chats = response.chats || [];
+        
+        const container = document.getElementById('chat-sessions-list');
+        const countBadge = document.getElementById('chats-count');
+        
+        if (countBadge) {
+            countBadge.textContent = chats.length;
         }
-
-        // Update UI
-        renderChatSessions();
-        updateChatsBadge();
-
+        
+        if (!container) {
+            console.error('Chat sessions container not found');
+            return;
+        }
+        
+        if (chats.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                    <h5>No Active Chats</h5>
+                    <p class="text-muted">Start a conversation by requesting a skill exchange.</p>
+                    <button class="btn btn-primary" onclick="showSection('skills')">
+                        Start Chatting
+                    </button>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = chats.map(chat => `
+            <div class="card mb-3 chat-session-card" onclick="openChatSession('${chat.skillId}', '${chat.otherUser?.name || 'User'}')">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-2">
+                            <div class="user-avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
+                                 style="width: 40px; height: 40px;">
+                                ${getUserInitials(chat.otherUser?.name || 'U')}
+                            </div>
+                        </div>
+                        <div class="col-7">
+                            <h6 class="card-title mb-1">${chat.otherUser?.name || 'User'}</h6>
+                            <p class="card-text text-muted small mb-1">
+                                ${chat.lastMessage?.content || 'No messages yet'}
+                            </p>
+                            <small class="text-muted">
+                                ${formatTimeAgo(chat.lastMessage?.timestamp || chat.createdAt)}
+                            </small>
+                        </div>
+                        <div class="col-3 text-end">
+                            ${chat.unreadCount > 0 ? `
+                                <span class="badge bg-primary">${chat.unreadCount}</span>
+                            ` : ''}
+                            <button class="btn btn-outline-primary btn-sm mt-2">
+                                <i class="fas fa-comment"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        
+        console.log(`✅ Loaded ${chats.length} chat sessions`);
+        
     } catch (error) {
         console.error('❌ Error loading chat sessions:', error);
-        NotificationManager.show('Failed to load chat sessions', 'error');
+        const container = document.getElementById('chat-sessions-list');
+        if (container) {
+            container.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Failed to load chat sessions. Please try again.
+                </div>
+            `;
+        }
     }
 }
-
 // ✅ RENDER CHAT SESSIONS
 function renderChatSessions() {
     const container = document.getElementById('chat-sessions-list');
