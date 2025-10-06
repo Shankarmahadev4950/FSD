@@ -258,6 +258,7 @@ const appData = {
 
 // ✅ MOVE THESE TO TOP WITH OTHER VARIABLES (around line 60)
 let currentChatSkill = null;
+let currentChatSession = null;
 let messages = [];
 let messageInterval = null;
 let sessionInterval = null;
@@ -1423,7 +1424,7 @@ async function loginUser(credentials) {
 // ✅ LOAD USER EXCHANGES AFTER LOGIN
 async function loadUserExchanges() {
     try {
-        const response = await apiRequest('/api/exchanges/user');
+        const response = await apiRequest('/exchanges/user');
         if (response.exchanges) {
             userExchanges = response.exchanges;
             console.log(`✅ Loaded ${userExchanges.length} user exchanges`);
@@ -5826,16 +5827,25 @@ function initializeChatSystem() {
     }
 }
 
-// ✅ VIDEO CALL SYSTEM INITIALIZATION
 function initializeVideoCallSystem() {
     console.log('🎥 Initializing video call system...');
     
-    // Check if videoCallManager exists (videocall.js loaded)
+    // Check if videoCallManager exists
     if (typeof videoCallManager === 'undefined') {
-        console.warn('⚠️ VideoCallManager not loaded - make sure videocall.js is included in HTML');
+        console.warn('⚠️ VideoCallManager not loaded - video calls disabled');
+        // Create a minimal fallback
+        window.videoCallManager = {
+            initializeSocket: function(socket) {
+                console.log('🎥 Video call system not available');
+            },
+            startCall: function(skillId, recipientId, recipientName) {
+                NotificationManager.show('Video calls are currently unavailable. Please use messaging instead.', 'info');
+            },
+            isCallActive: false,
+            socket: null
+        };
         return;
     }
-    
     // Strategy 1: If WebSocket is already available, initialize immediately
     if (typeof socket !== 'undefined' && socket.readyState === WebSocket.OPEN) {
         console.log('✅ WebSocket already connected - initializing video calls');
