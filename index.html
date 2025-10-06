@@ -211,6 +211,19 @@
                         <span class="nav-badge" id="skills-badge">6</span>
                     </a>
                 </li>
+                                <!-- Add these to your existing navbar list -->
+<li class="nav-item d-none" id="nav-requests-item">
+    <a class="nav-link nav-button-outline" href="#" id="nav-requests">
+        <i class="fas fa-clock nav-icon"></i>Pending Requests
+        <span class="nav-badge" id="requests-badge">0</span>
+    </a>
+</li>
+<li class="nav-item d-none" id="nav-chats-item">
+    <a class="nav-link nav-button-outline" href="#" id="nav-chats">
+        <i class="fas fa-comments nav-icon"></i>Chats
+        <span class="nav-badge" id="chats-badge">0</span>
+    </a>
+</li>
                 <li class="nav-item d-none" id="nav-profile-item">
                     <a class="nav-link nav-button-outline" href="#" id="nav-profile">
                         <i class="fas fa-user nav-icon"></i>Profile
@@ -873,7 +886,146 @@
             </div>
         </div>
     </div>
+<!-- Pending Requests Section -->
+<div id="pending-requests-section" class="d-none">
+    <div class="container mt-5 pt-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2 class="section-heading mb-3">Pending Exchange Requests</h2>
+                <p class="lead text-muted">Manage your incoming and outgoing skill exchange requests</p>
+            </div>
+        </div>
 
+        <!-- Tabs for Incoming/Outgoing Requests -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <ul class="nav nav-tabs" id="requestsTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="incoming-tab" data-bs-toggle="tab" 
+                                data-bs-target="#incoming" type="button" role="tab">
+                            <i class="fas fa-inbox me-2"></i>Incoming Requests
+                            <span class="badge bg-primary ms-2" id="incoming-count">0</span>
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="outgoing-tab" data-bs-toggle="tab" 
+                                data-bs-target="#outgoing" type="button" role="tab">
+                            <i class="fas fa-paper-plane me-2"></i>Outgoing Requests
+                            <span class="badge bg-secondary ms-2" id="outgoing-count">0</span>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Tab Content -->
+        <div class="tab-content" id="requestsTabContent">
+            <!-- Incoming Requests Tab -->
+            <div class="tab-pane fade show active" id="incoming" role="tabpanel">
+                <div class="row">
+                    <div class="col-12">
+                        <div id="incoming-requests-list" class="requests-container">
+                            <!-- Incoming requests will be populated by JavaScript -->
+                            <div class="text-center py-5">
+                                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                <h5>No Incoming Requests</h5>
+                                <p class="text-muted">When someone requests to learn your skills, they'll appear here.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Outgoing Requests Tab -->
+            <div class="tab-pane fade" id="outgoing" role="tabpanel">
+                <div class="row">
+                    <div class="col-12">
+                        <div id="outgoing-requests-list" class="requests-container">
+                            <!-- Outgoing requests will be populated by JavaScript -->
+                            <div class="text-center py-5">
+                                <i class="fas fa-paper-plane fa-3x text-muted mb-3"></i>
+                                <h5>No Outgoing Requests</h5>
+                                <p class="text-muted">Your pending skill exchange requests will appear here.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- Chat Sessions Section -->
+<div id="chat-sessions-section" class="d-none">
+    <div class="container mt-5 pt-4">
+        <div class="row">
+            <div class="col-12">
+                <h2 class="section-heading mb-3">Your Conversations</h2>
+                <p class="lead text-muted">Continue your conversations with skill providers and learners</p>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Chat List Sidebar -->
+            <div class="col-lg-4 mb-4">
+                <div class="card chat-sidebar">
+                    <div class="card-header">
+                        <h5 class="mb-0">Active Conversations</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="chat-list" id="chat-sessions-list">
+                            <!-- Chat sessions will be populated by JavaScript -->
+                            <div class="text-center py-5">
+                                <i class="fas fa-comments fa-2x text-muted mb-3"></i>
+                                <p class="text-muted">No active conversations</p>
+                                <small class="text-muted">Start a conversation by messaging a skill provider</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Messages Area -->
+            <div class="col-lg-8 mb-4">
+                <div class="card chat-messages-container">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div id="current-chat-header">
+                            <h5 class="mb-0">Select a conversation</h5>
+                        </div>
+                        <div id="chat-actions" class="d-none">
+                            <button class="btn btn-sm btn-outline-primary" id="start-video-call">
+                                <i class="fas fa-video me-1"></i>Video Call
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" id="view-skill-details">
+                                <i class="fas fa-info-circle me-1"></i>Skill Details
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <!-- Messages Container -->
+                        <div id="chat-messages-display" class="messages-container" style="height: 500px; overflow-y: auto;">
+                            <div class="text-center py-5">
+                                <i class="fas fa-comment-dots fa-3x text-muted mb-3"></i>
+                                <h5>Select a conversation</h5>
+                                <p class="text-muted">Choose a conversation from the list to start messaging</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Message Input (hidden by default) -->
+                        <div id="chat-input-container" class="message-input-container p-3 border-top d-none">
+                            <div class="input-group">
+                                <input type="text" class="form-control" placeholder="Type your message..." id="chat-message-input">
+                                <button class="btn btn-primary" id="send-chat-message">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 <!-- Profile Section -->
 <div id="profile-section" class="d-none">
     <div class="container mt-5 pt-4">
