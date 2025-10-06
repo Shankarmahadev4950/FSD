@@ -262,6 +262,7 @@ let currentChatSkill = null;
 let messages = [];
 let messageInterval = null;
 let sessionInterval = null;
+let socket = null;
 // Add event listener for Get Started button
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, setting up Get Started button');
