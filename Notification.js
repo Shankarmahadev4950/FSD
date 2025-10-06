@@ -567,20 +567,25 @@ notificationSchema.pre('save', function(next) {
     next();
 });
 
-// ✅ POST-SAVE MIDDLEWARE (for real-time updates)
+// ✅ FIXED NOTIFICATION POST-SAVE HOOK
 notificationSchema.post('save', async function(doc) {
-    // Emit real-time update via WebSocket if available
-    if (process.emit && doc.user) {
-        try {
-            const unreadCount = await doc.constructor.getUnreadCount(doc.user);
-            process.emit('notification:new', {
-                notification: doc,
-                unreadCount,
-                userId: doc.user.toString()
-            });
-        } catch (error) {
-            console.error('Error emitting notification event:', error);
+    try {
+        console.log(`📢 Notification saved for user: ${doc.user}`);
+        
+        // Get unread count for this user
+        const unreadCount = await mongoose.model('Notification').countDocuments({
+            user: doc.user,
+            isRead: false
+        });
+        
+        // ✅ FIXED: Proper event emission
+        if (process.emit) {
+            process.emit('notification:new', doc, unreadCount, doc.user.toString());
+            console.log(`✅ Notification event emitted for user: ${doc.user}`);
         }
+        
+    } catch (error) {
+        console.error('❌ Notification post-save error:', error);
     }
 });
 
