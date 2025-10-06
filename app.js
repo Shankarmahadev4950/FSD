@@ -257,6 +257,7 @@ const appData = {
 };
 
 // ✅ MOVE THESE TO TOP WITH OTHER VARIABLES (around line 60)
+let exchangePollInterval = null;
 let currentChatSkill = null;
 let messages = [];
 let messageInterval = null;
@@ -4836,8 +4837,6 @@ function showExchangePendingModal(skill, exchange) {
 }
 
 // ✅ POLL FOR EXCHANGE STATUS UPDATES
-let exchangePollInterval = null;
-
 function startExchangePolling(exchangeId) {
     // Clear existing interval
     if (exchangePollInterval) {
@@ -4869,7 +4868,6 @@ function startExchangePolling(exchangeId) {
         }
     }, 5000);
 }
-
 // ✅ SHOW EXCHANGE RESULT
 function showExchangeResultModal(result, exchange) {
     const modalElement = document.getElementById('exchangePendingModal');
