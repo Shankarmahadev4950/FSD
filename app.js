@@ -336,7 +336,69 @@ const TokenManager = {
 // ✅ ENHANCED NOTIFICATION SYSTEM - ONLY ONLINE USER COUNTS
 const NotificationManager = {
     onlineUsersCount: 0,
+     showNotificationFromServer: function(notification) {
+        const notificationElement = document.createElement('div');
+        notificationElement.className = `alert alert-${this.getNotificationTypeClass(notification.type)} notification-toast`;
+        notificationElement.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            min-width: 300px;
+            animation: slideInRight 0.3s ease-out;
+            cursor: pointer;
+        `;
+        notificationElement.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>${notification.title}</strong>
+                    <div class="small">${notification.message}</div>
+                </div>
+                <button type="button" class="btn-close" onclick="this.parentElement.parentElement.remove()"></button>
+            </div>
+        `;
+        
+        // Click to navigate to relevant page
+        notificationElement.addEventListener('click', function() {
+            if (notification.actionUrl) {
+                window.location.href = notification.actionUrl;
+            }
+        });
+        
+        document.body.appendChild(notificationElement);
+        
+        // Auto remove after duration
+        setTimeout(() => {
+            if (notificationElement.parentElement) {
+                notificationElement.remove();
+            }
+        }, 5000);
+    },
     
+    getNotificationTypeClass: function(type) {
+        const typeMap = {
+            'info': 'info',
+            'success': 'success', 
+            'warning': 'warning',
+            'error': 'danger',
+            'exchange_request': 'primary',
+            'message': 'info'
+        };
+        return typeMap[type] || 'info';
+    },
+    
+    updateNotificationBadge: function(count) {
+        const badge = document.getElementById('notification-badge');
+        if (badge) {
+            if (count > 0) {
+                badge.textContent = count > 99 ? '99+' : count;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+    }
+};
     // Only show notifications for online users count
     showOnlineUsersCount: function(count) {
         this.onlineUsersCount = count;
@@ -397,6 +459,9 @@ const NotificationManager = {
         }
     }
 };
+function updateNotificationBadge(count) {
+    NotificationManager.updateNotificationBadge(count);
+}
 // Add CSS for notifications
 const style = document.createElement('style');
 style.textContent = `
@@ -670,6 +735,67 @@ function setupSearchFunctionality() {
     }
 }
 
+
+// Add this function to handle incoming notifications
+function handleWebSocketNotification(data) {
+    console.log('📢 Received notification via WebSocket:', data);
+    
+    if (data.type === 'notification') {
+        const notification = data.notification;
+        const unreadCount = data.unreadCount;
+        
+        // Update notification badge
+        updateNotificationBadge(unreadCount);
+        
+        // Show desktop notification if permitted
+        if (Notification.permission === 'granted') {
+            new Notification(notification.title, {
+                body: notification.message,
+                icon: '/favicon.ico'
+            });
+        }
+        
+        // Show in-app notification
+        NotificationManager.show(
+            `${notification.title}: ${notification.message}`,
+            notification.type || 'info',
+            5000
+        );
+        
+        // Refresh notifications if on notifications page
+        if (currentSection === 'notifications') {
+            loadNotifications();
+        }
+    }
+}
+// ✅ UPDATE WEBSOCKET MESSAGE HANDLER
+function setupWebSocketMessageHandler(socket) {
+    socket.onmessage = function(event) {
+        try {
+            const data = JSON.parse(event.data);
+            console.log('📨 WebSocket message received:', data.type);
+            
+            switch (data.type) {
+                case 'notification':
+                    handleWebSocketNotification(data);
+                    break;
+                case 'new_message':
+                    handleNewMessage(data.message);
+                    break;
+                case 'video_call_request':
+                    handleIncomingVideoCall(data);
+                    break;
+                case 'registered':
+                    console.log('✅ WebSocket registration confirmed');
+                    break;
+                default:
+                    console.log('Unknown message type:', data.type);
+            }
+        } catch (error) {
+            console.error('WebSocket message parsing error:', error);
+        }
+    };
+}
 // ✅ ADD MISSING: PERFORM SKILLS SEARCH
 function performSkillsSearch(searchTerm) {
     if (!filteredSkills || filteredSkills.length === 0) {
@@ -715,32 +841,49 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function connectWebSocket() {
     try {
-        // Your existing WebSocket connection code
-        socket = new WebSocket('ws://localhost:5001'); // or your WebSocket URL
+        const socket = new WebSocket('ws://localhost:5001');
         
         socket.onopen = function(event) {
             console.log('✅ WebSocket connected successfully');
             
-            // ✅ CRITICAL: Initialize video call manager
-            videoCallManager.initializeSocket(socket);
+            // Register user with authentication token
+            const token = TokenManager.getToken();
+            if (token) {
+                socket.send(JSON.stringify({
+                    type: 'register',
+                    token: token
+                }));
+            }
             
-            // Also dispatch global event for other components
+            // Initialize systems that need WebSocket
+            if (typeof videoCallManager !== 'undefined') {
+                videoCallManager.initializeSocket(socket);
+            }
+            
+            // Setup message handler
+            setupWebSocketMessageHandler(socket);
+            
+            // Dispatch global event
             window.dispatchEvent(new CustomEvent('websocketConnected', {
                 detail: { socket: socket }
             }));
         };
         
-        socket.onmessage = function(event) {
-            // Your existing message handling
-            const data = JSON.parse(event.data);
-            // ... handle other messages
+        socket.onclose = function(event) {
+            console.log('🔌 WebSocket disconnected, attempting reconnect...');
+            setTimeout(connectWebSocket, 3000);
         };
         
+        socket.onerror = function(error) {
+            console.error('❌ WebSocket error:', error);
+        };
+        
+        return socket;
     } catch (error) {
         console.error('❌ WebSocket connection failed:', error);
+        return null;
     }
 }
-
 function startVideoCall(skillId, recipientId, recipientName) {
     console.log('🎬 Starting video call to:', recipientName);
     
