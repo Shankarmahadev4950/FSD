@@ -745,9 +745,9 @@ function addVideoCallButton(skillId, providerId, providerName) {
     `;
 }
 
-// ✅ START VIDEO CALL FUNCTION (GLOBAL)
+// ✅ ENHANCED START VIDEO CALL FUNCTION
 function startVideoCall(skillId, recipientId, recipientName) {
-    if (!currentUser) {
+    if (!currentUser || !currentUser.id) {
         NotificationManager.show('Please login to start a video call', 'error');
         showAuthForm('signin');
         return;
