@@ -440,7 +440,37 @@ document.addEventListener('DOMContentLoaded', function() {
         initializeApp();
     }, 100);
 });
+// ✅ FORMAT MESSAGE TIME
+function formatMessageTime(timestamp) {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
 
+// ✅ START VIDEO SESSION (for accepted exchanges)
+function startVideoSession(exchangeId) {
+    // Close any open modals
+    const modal = bootstrap.Modal.getInstance(document.getElementById('exchangeResultModal'));
+    if (modal) {
+        modal.hide();
+    }
+    
+    // Find the exchange and start video call
+    // You'll need to implement this based on your video call system
+    console.log('Starting video session for exchange:', exchangeId);
+    NotificationManager.show('Video session starting...', 'info');
+    
+    // Example implementation:
+    // startVideoCall(exchange.skillId, exchange.providerId, exchange.providerName);
+}
 // ✅ SESSION MANAGEMENT - Check existing session
 async function checkExistingSession() {
     const token = TokenManager.getToken();
@@ -900,20 +930,6 @@ function stopMessagePolling() {
     }
 }
 
-// ✅ FORMAT MESSAGE TIME
-function formatMessageTime(timestamp) {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
 
 // ✅ CLOSE MESSAGING MODAL HANDLER
 document.addEventListener('DOMContentLoaded', function() {
@@ -4710,7 +4726,7 @@ function animateCounters() {
     });
 }
 
-// ✅ ENHANCED EXCHANGE REQUEST FUNCTION WITH LOADING STATE
+// ✅ ENHANCED EXCHANGE REQUEST FUNCTION
 async function requestExchange(skillId) {
     if (!currentUser) {
         NotificationManager.show('Please log in to request an exchange', 'error');
@@ -4726,11 +4742,12 @@ async function requestExchange(skillId) {
     }
 
     try {
-        // Show loading state
-        const exchangeBtn = document.querySelector(`[onclick*="${skillId}"]`);
-        const originalText = exchangeBtn?.innerHTML;
+        // Show loading state - use more specific selector
+        const exchangeBtn = document.querySelector(`button[onclick*="requestExchange('${skillId}')"]`);
+        let originalText = null;
         
         if (exchangeBtn) {
+            originalText = exchangeBtn.innerHTML;
             exchangeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Requesting...';
             exchangeBtn.disabled = true;
         }
@@ -4755,10 +4772,10 @@ async function requestExchange(skillId) {
     } catch (error) {
         console.error('Exchange request error:', error);
         
-        // Reset button state
-        const exchangeBtn = document.querySelector(`[onclick*="${skillId}"]`);
-        if (exchangeBtn) {
-            exchangeBtn.innerHTML = 'Exchange';
+        // Reset button state if button exists
+        const exchangeBtn = document.querySelector(`button[onclick*="requestExchange('${skillId}')"]`);
+        if (exchangeBtn && originalText) {
+            exchangeBtn.innerHTML = originalText;
             exchangeBtn.disabled = false;
         }
         
