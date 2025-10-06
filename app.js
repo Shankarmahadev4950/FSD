@@ -3639,20 +3639,101 @@ function toggleActivityView() {
     }
 }
 
-// ✅ ENHANCED ACTIVITY DASHBOARD RENDERING
+// ✅ UPDATE ACTIVITY DASHBOARD WITH REAL DATA
+function updateActivityStats(stats) {
+    if (!stats) return;
+    
+    // Update quick stats cards
+    document.getElementById('stats-total-hours').textContent = stats.totalHoursActive?.toFixed(1) || '0';
+    document.getElementById('stats-skills-learned').textContent = stats.skillsLearned || '0';
+    document.getElementById('stats-courses-completed').textContent = stats.coursesCompleted || '0';
+    
+    // Calculate active streak (simplified)
+    const activeStreak = calculateActiveStreak(stats.learningProgress);
+    document.getElementById('stats-active-streak').textContent = activeStreak;
+    
+    // Update last updated timestamp
+    document.getElementById('activity-last-updated').textContent = 'Just now';
+}
+
+// ✅ CALCULATE ACTIVE STREAK
+function calculateActiveStreak(learningProgress) {
+    if (!learningProgress || learningProgress.length === 0) return 0;
+    
+    // Simple streak calculation - in real app, use actual dates
+    const today = new Date();
+    const recentActivities = learningProgress.filter(activity => {
+        const activityDate = new Date(activity.date);
+        const diffDays = Math.floor((today - activityDate) / (1000 * 60 * 60 * 24));
+        return diffDays <= 7; // Activities in last 7 days
+    });
+    
+    return recentActivities.length > 0 ? Math.min(recentActivities.length, 7) : 0;
+}
+
 function renderActivityDashboard() {
-    console.log('Rendering activity dashboard');
+    console.log('🔄 Rendering activity dashboard...');
+    
     const stats = ActivityTracker.getActivityStats();
+    
     if (!stats) {
         renderEmptyActivityState();
         return;
     }
+    
+    // Update all stats and charts
+    updateActivityStats(stats);
     renderActivityStats(stats);
     renderWeeklyActivityChart(stats.weeklyActivity);
     renderSkillsProgressChart(stats.learningProgress);
     renderCoursesCompleted(stats);
+    renderRecentActivity(stats.learningProgress);
+    
+    console.log('✅ Activity dashboard rendered successfully');
 }
-
+// ✅ RENDER RECENT ACTIVITY
+function renderRecentActivity(learningProgress) {
+    const container = document.getElementById('recent-activity');
+    if (!container) return;
+    
+    if (!learningProgress || learningProgress.length === 0) {
+        container.innerHTML = `
+            <div class="list-group-item text-center py-4">
+                <i class="fas fa-history fa-2x text-muted mb-3"></i>
+                <p class="text-muted mb-2">No recent activity</p>
+                <small class="text-muted">Start learning to see your activity here</small>
+            </div>
+        `;
+        return;
+    }
+    
+    // Get recent activities (last 5)
+    const recentActivities = learningProgress
+        .slice(-5)
+        .reverse();
+    
+    container.innerHTML = recentActivities.map(activity => `
+        <div class="list-group-item">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                    <h6 class="mb-1">${activity.course || activity.skill || 'Activity'}</h6>
+                    <p class="mb-1 text-muted small">
+                        ${activity.description || `${activity.type === 'course_completed' ? 'Completed' : 'Progress'} in ${activity.skill}`}
+                    </p>
+                    <small class="text-muted">
+                        <i class="fas fa-clock me-1"></i>
+                        ${formatActivityTime(activity.date)}
+                    </small>
+                </div>
+                <div class="text-end">
+                    <span class="badge bg-${activity.type === 'course_completed' ? 'success' : 'primary'}">
+                        ${activity.hours || 0}h
+                    </span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
 
 // ✅ FIXED RENDER ACTIVITY STATS
 function renderActivityStats(stats) {
@@ -3756,6 +3837,21 @@ function renderWeeklyActivityChart(weeklyActivity) {
     }, 100);
 }
 
+// ✅ FORMAT ACTIVITY TIME
+function formatActivityTime(timestamp) {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+}
 // ✅ FIXED RENDER SKILLS PROGRESS CHART
 function renderSkillsProgressChart(learningProgress) {
     const skills = ActivityTracker.getSkillsWithHours();
