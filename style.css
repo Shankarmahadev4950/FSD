@@ -1774,3 +1774,31 @@ html {
 .skills-highlight {
     animation: highlightSkills 3s ease;
 }
+/* Message Status Styles */
+.message-status {
+    margin-left: 5px;
+    font-size: 0.8em;
+}
+
+.message-sent .message-meta {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.message-error {
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+/* Exchange Modal Styles */
+.exchange-details {
+    border-left: 4px solid #007bff;
+}
+
+.loading-spinner {
+    display: flex;
+    justify-content: center;
+}
