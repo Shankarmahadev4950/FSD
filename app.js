@@ -264,6 +264,8 @@ let messageInterval = null;
 let sessionInterval = null;
 let socket = null;
 let userExchanges = []; 
+let chatSessions = [];
+let currentChatSession = null;
 // Add event listener for Get Started button
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, setting up Get Started button');
@@ -1490,6 +1492,31 @@ function updateNavigationBadges() {
 // ✅ ENHANCED NAVIGATION CLICK HANDLERS
 function setupNavigationHandlers() {
     console.log('Setting up navigation handlers...');
+const navRequests = document.getElementById('nav-requests');
+if (navRequests) {
+    navRequests.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (currentUser) {
+            showSection('pending-requests');
+            loadPendingRequests();
+        } else {
+            showAuthForm('signin');
+        }
+    });
+}
+
+const navChats = document.getElementById('nav-chats');
+if (navChats) {
+    navChats.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (currentUser) {
+            showSection('chat-sessions');
+            loadChatSessions();
+        } else {
+            showAuthForm('signin');
+        }
+    });
+}
 
     // Home navigation
     const navHome = document.getElementById('nav-home');
@@ -1555,7 +1582,7 @@ function setupNavigationHandlers() {
 // ✅ ENHANCED UI UPDATE FUNCTION
 function updateUIForLoggedInUser() {
     console.log('🔄 Updating UI for logged in user:', currentUser);
-    
+    const authRequiredItems = ['nav-dashboard-item', 'nav-skills-item', 'nav-profile-item', 'nav-requests-item', 'nav-chats-item'];
     const guestNav = document.getElementById('guest-nav');
     const userNav = document.getElementById('user-nav');
     
@@ -2314,7 +2341,7 @@ function showSection(sectionName) {
     console.log('🔄 Showing section:', sectionName);
 
     // Hide all sections
-    const sections = ['landing-page', 'auth-section', 'dashboard-section', 'skills-section', 'profile-section'];
+   const sections = ['landing-page', 'auth-section', 'dashboard-section', 'skills-section', 'profile-section', 'pending-requests-section', 'chat-sessions-section'];
     sections.forEach(sectionId => {
         const section = document.getElementById(sectionId);
         if (section) {
@@ -2322,6 +2349,7 @@ function showSection(sectionName) {
             console.log(`📦 Hid section: ${sectionId}`);
         }
     });
+
 
     // Show target section
     const targetSection = document.getElementById(`${sectionName}-section`) || document.getElementById(`${sectionName}-page`);
@@ -2351,6 +2379,24 @@ function showSection(sectionName) {
             console.log('Loading profile...');
             loadProfile();
             break;
+        case 'pending-requests':
+            console.log('Loading pending requests...');
+            loadPendingRequests();
+            break;
+        case 'chat-sessions':
+            console.log('Loading chat sessions...');
+            loadChatSessions();
+            break;
+        case 'landing':
+            console.log('Showing landing page...');
+            // Reset any landing page specific states if needed
+            break;
+        case 'auth':
+            console.log('Showing auth section...');
+            // Reset auth forms if needed
+            break;
+        default:
+            console.log(`No specific loader for section: ${sectionName}`);
     }
 }
 
@@ -4980,32 +5026,524 @@ function showExchangeResultModal(result, exchange) {
     });
 }
 
-// ✅ CANCEL EXCHANGE REQUEST
-async function cancelExchangeRequest(exchangeId) {
+let pendingRequests = {
+    incoming: [],
+    outgoing: []
+};
+
+// ✅ LOAD PENDING REQUESTS
+async function loadPendingRequests() {
+    if (!currentUser) {
+        console.log('User not logged in, cannot load pending requests');
+        return;
+    }
+
     try {
-        await apiRequest(`/exchanges/${exchangeId}/cancel`, {
-            method: 'PATCH'
-        });
+        console.log('🔄 Loading pending requests...');
         
-        if (exchangePollInterval) {
-            clearInterval(exchangePollInterval);
+        // Load incoming requests (requests to learn your skills)
+        const incomingResponse = await apiRequest('/exchanges/incoming');
+        if (incomingResponse && incomingResponse.exchanges) {
+            pendingRequests.incoming = incomingResponse.exchanges;
         }
-        
-        const modalElement = document.getElementById('exchangePendingModal');
-        if (modalElement) {
-            const modal = bootstrap.Modal.getInstance(modalElement);
-            if (modal) {
-                modal.hide();
-            }
+
+        // Load outgoing requests (your requests to learn others' skills)
+        const outgoingResponse = await apiRequest('/exchanges/outgoing');
+        if (outgoingResponse && outgoingResponse.exchanges) {
+            pendingRequests.outgoing = outgoingResponse.exchanges;
         }
+
+        console.log(`✅ Loaded ${pendingRequests.incoming.length} incoming and ${pendingRequests.outgoing.length} outgoing requests`);
         
-        NotificationManager.show('Exchange request cancelled', 'info');
-        
+        // Update UI
+        renderPendingRequests();
+        updateRequestsBadge();
+
     } catch (error) {
-        console.error('Cancel exchange error:', error);
-        NotificationManager.show('Failed to cancel exchange: ' + error.message, 'error');
+        console.error('❌ Error loading pending requests:', error);
+        NotificationManager.show('Failed to load pending requests', 'error');
     }
 }
+
+// ✅ RENDER PENDING REQUESTS
+function renderPendingRequests() {
+    renderIncomingRequests();
+    renderOutgoingRequests();
+}
+
+// ✅ RENDER INCOMING REQUESTS
+function renderIncomingRequests() {
+    const container = document.getElementById('incoming-requests-list');
+    if (!container) return;
+
+    const incomingCount = document.getElementById('incoming-count');
+    if (incomingCount) {
+        incomingCount.textContent = pendingRequests.incoming.length;
+    }
+
+    if (pendingRequests.incoming.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-5">
+                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                <h5>No Incoming Requests</h5>
+                <p class="text-muted">When someone requests to learn your skills, they'll appear here.</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = pendingRequests.incoming.map(request => `
+        <div class="card request-card mb-3" data-request-id="${request._id || request.id}">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <div class="d-flex align-items-center">
+                            <div class="user-avatar me-3">
+                                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
+                                     style="width: 50px; height: 50px; font-size: 16px;">
+                                    ${getUserInitials(request.learnerName || 'User')}
+                                </div>
+                            </div>
+                            <div>
+                                <h5 class="mb-1">${request.learnerName || 'User'} wants to learn</h5>
+                                <p class="mb-1"><strong>${request.skillName || 'Skill'}</strong></p>
+                                <p class="text-muted mb-0 small">
+                                    <i class="fas fa-clock me-1"></i> ${request.hours || 1} hour(s) • 
+                                    Requested ${formatMessageTime(request.createdAt)}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <div class="btn-group">
+                            <button class="btn btn-success btn-sm" onclick="acceptExchangeRequest('${request._id || request.id}')">
+                                <i class="fas fa-check me-1"></i>Accept
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="rejectExchangeRequest('${request._id || request.id}')">
+                                <i class="fas fa-times me-1"></i>Reject
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// ✅ RENDER OUTGOING REQUESTS
+function renderOutgoingRequests() {
+    const container = document.getElementById('outgoing-requests-list');
+    if (!container) return;
+
+    const outgoingCount = document.getElementById('outgoing-count');
+    if (outgoingCount) {
+        outgoingCount.textContent = pendingRequests.outgoing.length;
+    }
+
+    if (pendingRequests.outgoing.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-5">
+                <i class="fas fa-paper-plane fa-3x text-muted mb-3"></i>
+                <h5>No Outgoing Requests</h5>
+                <p class="text-muted">Your pending skill exchange requests will appear here.</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = pendingRequests.outgoing.map(request => `
+        <div class="card request-card mb-3 pending" data-request-id="${request._id || request.id}">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <div class="d-flex align-items-center">
+                            <div class="user-avatar me-3">
+                                <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center" 
+                                     style="width: 50px; height: 50px; font-size: 16px;">
+                                    ${getUserInitials(request.providerName || 'User')}
+                                </div>
+                            </div>
+                            <div>
+                                <h5 class="mb-1">You requested to learn</h5>
+                                <p class="mb-1"><strong>${request.skillName || 'Skill'}</strong> from ${request.providerName || 'User'}</p>
+                                <p class="text-muted mb-0 small">
+                                    <i class="fas fa-clock me-1"></i> ${request.hours || 1} hour(s) • 
+                                    Sent ${formatMessageTime(request.createdAt)} • 
+                                    <span class="badge bg-warning">Pending</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <button class="btn btn-outline-danger btn-sm" onclick="cancelExchangeRequest('${request._id || request.id}')">
+                            <i class="fas fa-times me-1"></i>Cancel Request
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// ✅ ACCEPT EXCHANGE REQUEST
+async function acceptExchangeRequest(exchangeId) {
+    try {
+        console.log('🔄 Accepting exchange request:', exchangeId);
+        
+        const response = await apiRequest(`/exchanges/${exchangeId}/accept`, {
+            method: 'PATCH'
+        });
+
+        if (response && response.exchange) {
+            NotificationManager.show('Exchange request accepted! You can now start the session.', 'success');
+            
+            // Reload requests
+            await loadPendingRequests();
+            
+            // Optionally navigate to chat sessions
+            showSection('chat-sessions');
+        }
+    } catch (error) {
+        console.error('❌ Error accepting exchange request:', error);
+        NotificationManager.show('Failed to accept request: ' + error.message, 'error');
+    }
+}
+
+// ✅ REJECT EXCHANGE REQUEST
+async function rejectExchangeRequest(exchangeId) {
+    if (!confirm('Are you sure you want to reject this exchange request?')) {
+        return;
+    }
+
+    try {
+        console.log('🔄 Rejecting exchange request:', exchangeId);
+        
+        const response = await apiRequest(`/exchanges/${exchangeId}/reject`, {
+            method: 'PATCH'
+        });
+
+        if (response && response.exchange) {
+            NotificationManager.show('Exchange request rejected.', 'info');
+            
+            // Reload requests
+            await loadPendingRequests();
+        }
+    } catch (error) {
+        console.error('❌ Error rejecting exchange request:', error);
+        NotificationManager.show('Failed to reject request: ' + error.message, 'error');
+    }
+}
+
+// ✅ CANCEL EXCHANGE REQUEST (for outgoing requests)
+async function cancelExchangeRequest(exchangeId) {
+    if (!confirm('Are you sure you want to cancel this exchange request?')) {
+        return;
+    }
+
+    try {
+        console.log('🔄 Canceling exchange request:', exchangeId);
+        
+        const response = await apiRequest(`/exchanges/${exchangeId}/cancel`, {
+            method: 'PATCH'
+        });
+
+        if (response && response.exchange) {
+            NotificationManager.show('Exchange request cancelled.', 'info');
+            
+            // Reload requests
+            await loadPendingRequests();
+        }
+    } catch (error) {
+        console.error('❌ Error canceling exchange request:', error);
+        NotificationManager.show('Failed to cancel request: ' + error.message, 'error');
+    }
+}
+// ✅ LOAD CHAT SESSIONS
+async function loadChatSessions() {
+    if (!currentUser) {
+        console.log('User not logged in, cannot load chat sessions');
+        return;
+    }
+
+    try {
+        console.log('🔄 Loading chat sessions...');
+        
+        // Load chat sessions (accepted exchanges with messages)
+        const response = await apiRequest('/exchanges/accepted');
+        if (response && response.exchanges) {
+            chatSessions = response.exchanges;
+            console.log(`✅ Loaded ${chatSessions.length} chat sessions`);
+        }
+
+        // Update UI
+        renderChatSessions();
+        updateChatsBadge();
+
+    } catch (error) {
+        console.error('❌ Error loading chat sessions:', error);
+        NotificationManager.show('Failed to load chat sessions', 'error');
+    }
+}
+
+// ✅ RENDER CHAT SESSIONS
+function renderChatSessions() {
+    const container = document.getElementById('chat-sessions-list');
+    if (!container) return;
+
+    const chatsBadge = document.getElementById('chats-badge');
+    if (chatsBadge) {
+        chatsBadge.textContent = chatSessions.length;
+    }
+
+    if (chatSessions.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-5">
+                <i class="fas fa-comments fa-2x text-muted mb-3"></i>
+                <p class="text-muted">No active conversations</p>
+                <small class="text-muted">Start a conversation by messaging a skill provider</small>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = chatSessions.map(session => {
+        const otherUser = session.learner?._id === currentUser.id ? session.provider : session.learner;
+        const otherUserName = otherUser?.name || 'User';
+        const skillName = session.skillName || 'Skill';
+        const isActive = currentChatSession && currentChatSession._id === session._id;
+
+        return `
+            <div class="chat-session-item p-3 ${isActive ? 'active' : ''}" 
+                 onclick="selectChatSession('${session._id || session.id}')"
+                 style="cursor: pointer;">
+                <div class="d-flex align-items-center">
+                    <div class="chat-user-avatar me-3">
+                        ${getUserInitials(otherUserName)}
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">${otherUserName}</h6>
+                        <p class="text-muted mb-0 small">${skillName}</p>
+                        <small class="text-muted">Last activity: ${formatMessageTime(session.updatedAt)}</small>
+                    </div>
+                    <div class="ms-2">
+                        <span class="badge bg-success">Active</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// ✅ SELECT CHAT SESSION
+async function selectChatSession(sessionId) {
+    try {
+        const session = chatSessions.find(s => s._id === sessionId || s.id === sessionId);
+        if (!session) {
+            console.error('Chat session not found:', sessionId);
+            return;
+        }
+
+        currentChatSession = session;
+        
+        // Update UI to show selected state
+        document.querySelectorAll('.chat-session-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        
+        const selectedItem = document.querySelector(`[onclick="selectChatSession('${sessionId}')"]`);
+        if (selectedItem) {
+            selectedItem.classList.add('active');
+        }
+
+        // Update chat header
+        const otherUser = session.learner?._id === currentUser.id ? session.provider : session.learner;
+        const otherUserName = otherUser?.name || 'User';
+        const skillName = session.skillName || 'Skill';
+
+        const chatHeader = document.getElementById('current-chat-header');
+        const chatActions = document.getElementById('chat-actions');
+        const chatInput = document.getElementById('chat-input-container');
+
+        if (chatHeader) {
+            chatHeader.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <div class="chat-user-avatar me-3">
+                        ${getUserInitials(otherUserName)}
+                    </div>
+                    <div>
+                        <h5 class="mb-0">${otherUserName}</h5>
+                        <small class="text-muted">${skillName}</small>
+                    </div>
+                </div>
+            `;
+        }
+
+        if (chatActions) {
+            chatActions.classList.remove('d-none');
+        }
+
+        if (chatInput) {
+            chatInput.classList.remove('d-none');
+        }
+
+        // Load messages for this session
+        await loadChatMessages(sessionId);
+
+    } catch (error) {
+        console.error('❌ Error selecting chat session:', error);
+        NotificationManager.show('Failed to load chat session', 'error');
+    }
+}
+
+// ✅ LOAD CHAT MESSAGES
+async function loadChatMessages(sessionId) {
+    try {
+        console.log('🔄 Loading chat messages for session:', sessionId);
+        
+        const response = await apiRequest(`/messages/exchange/${sessionId}`);
+        const messagesContainer = document.getElementById('chat-messages-display');
+        
+        if (!messagesContainer) return;
+
+        if (response && response.messages) {
+            const messages = response.messages;
+            
+            if (messages.length === 0) {
+                messagesContainer.innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="fas fa-comment-slash fa-3x text-muted mb-3"></i>
+                        <h5>No messages yet</h5>
+                        <p class="text-muted">Start the conversation by sending a message!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            messagesContainer.innerHTML = messages.map(message => {
+                const isSent = message.sender?._id === currentUser.id;
+                return `
+                    <div class="message-bubble ${isSent ? 'message-sent' : 'message-received'}">
+                        <div class="message-content">
+                            <p class="message-text">${message.content}</p>
+                            <div class="message-meta">
+                                <small class="message-time">${formatMessageTime(message.timestamp)}</small>
+                                ${isSent ? `
+                                    <span class="message-status ${message.read ? 'text-primary' : 'text-muted'}">
+                                        <i class="fas ${message.read ? 'fa-check-double' : 'fa-check'}"></i>
+                                    </span>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Scroll to bottom
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+    } catch (error) {
+        console.error('❌ Error loading chat messages:', error);
+        NotificationManager.show('Failed to load messages', 'error');
+    }
+}
+
+// ✅ SEND CHAT MESSAGE
+async function sendChatMessage() {
+    if (!currentChatSession || !currentUser) {
+        NotificationManager.show('Please select a conversation first', 'error');
+        return;
+    }
+
+    const messageInput = document.getElementById('chat-message-input');
+    const content = messageInput.value.trim();
+
+    if (!content) {
+        NotificationManager.show('Please enter a message', 'error');
+        return;
+    }
+
+    try {
+        console.log('🔄 Sending chat message for session:', currentChatSession._id);
+        
+        const messageData = {
+            exchangeId: currentChatSession._id,
+            content: content
+        };
+
+        const response = await apiRequest('/messages/send-to-exchange', {
+            method: 'POST',
+            body: messageData
+        });
+
+        if (response && response.message) {
+            // Clear input
+            messageInput.value = '';
+            
+            // Reload messages to show the new one
+            await loadChatMessages(currentChatSession._id);
+            
+            // Don't show success notification for individual messages
+        }
+
+    } catch (error) {
+        console.error('❌ Error sending chat message:', error);
+        NotificationManager.show('Failed to send message: ' + error.message, 'error');
+    }
+}
+
+// ✅ UPDATE CHATS BADGE
+function updateChatsBadge() {
+    const chatsBadge = document.getElementById('chats-badge');
+    if (chatsBadge) {
+        if (chatSessions.length > 0) {
+            chatsBadge.textContent = chatSessions.length;
+            chatsBadge.style.display = 'flex';
+        } else {
+            chatsBadge.style.display = 'none';
+        }
+    }
+}
+
+// ✅ SETUP CHAT EVENT LISTENERS
+function setupChatEventListeners() {
+    const sendButton = document.getElementById('send-chat-message');
+    const messageInput = document.getElementById('chat-message-input');
+    const videoCallButton = document.getElementById('start-video-call');
+    const viewSkillButton = document.getElementById('view-skill-details');
+
+    if (sendButton) {
+        sendButton.addEventListener('click', sendChatMessage);
+    }
+
+    if (messageInput) {
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendChatMessage();
+            }
+        });
+    }
+
+    if (videoCallButton) {
+        videoCallButton.addEventListener('click', () => {
+            if (currentChatSession) {
+                const otherUser = currentChatSession.learner?._id === currentUser.id ? currentChatSession.provider : currentChatSession.learner;
+                startVideoCall(currentChatSession.skill?._id, otherUser?._id, otherUser?.name);
+            }
+        });
+    }
+
+    if (viewSkillButton) {
+        viewSkillButton.addEventListener('click', () => {
+            if (currentChatSession && currentChatSession.skill) {
+                // Navigate to skills section and highlight the skill
+                showSection('skills');
+                // You might want to implement skill highlighting logic here
+            }
+        });
+    }
+}
+
 // ✅ CHECK FOR EXISTING EXCHANGES
 async function checkExistingExchange(skillId) {
     try {
@@ -5158,11 +5696,22 @@ async function initializeApp() {
         } catch (error) {
             console.warn('⚠️ OnlineStatusManager initialization warning:', error.message);
         }
-         try {
+        
+        // ✅ INITIALIZE VIDEO CALL SYSTEM
+        try {
             initializeVideoCallSystem();
         } catch (error) {
             console.warn('⚠️ Video call system initialization warning:', error.message);
         }
+        
+        // ✅ INITIALIZE CHAT SYSTEM
+        try {
+            initializeChatSystem();
+            console.log('✅ Chat system initialized successfully');
+        } catch (error) {
+            console.warn('⚠️ Chat system initialization warning:', error.message);
+        }
+        
         // Check backend connection
         try {
             const response = await fetch(`${API_BASE}/health`, { 
@@ -5194,6 +5743,15 @@ async function initializeApp() {
                     await OnlineStatusManager.setOnline();
                     console.log('✅ User marked as online after login');
                 }
+                
+                // Load user data if logged in
+                try {
+                    await loadUserExchanges();
+                    console.log('✅ User exchanges loaded successfully');
+                } catch (error) {
+                    console.warn('⚠️ User exchanges loading warning:', error.message);
+                }
+                
             } catch (error) {
                 console.warn('⚠️ Activity tracking initialization warning:', error.message);
             }
@@ -5204,13 +5762,6 @@ async function initializeApp() {
             showSection('dashboard');
         } else {
             showSection('landing');
-        }
-        
-        // Initialize video call system
-        try {
-            initializeVideoCallSystem();
-        } catch (error) {
-            console.warn('⚠️ Video call system initialization warning:', error.message);
         }
         
         // Initialize all app components
@@ -5235,6 +5786,7 @@ async function initializeApp() {
         showSection('landing');
     }
 }
+
 // ✅ VIDEO CALL MANAGER PLACEHOLDER - Ensure this exists
 if (typeof videoCallManager === 'undefined') {
     var videoCallManager = {
@@ -5248,6 +5800,31 @@ if (typeof videoCallManager === 'undefined') {
         isCallActive: false,
         socket: null
     };
+}
+
+// ✅ INITIALIZE CHAT SYSTEM
+function initializeChatSystem() {
+    try {
+        console.log('💬 Initializing chat system...');
+        
+        // Setup chat event listeners
+        setupChatEventListeners();
+        
+        // Start polling for new messages in active chat session
+        const chatPollInterval = setInterval(() => {
+            if (currentChatSession && currentUser) {
+                loadChatMessages(currentChatSession._id);
+            }
+        }, 3000); // Poll every 3 seconds
+        
+        // Store interval ID for cleanup if needed
+        window.chatPollInterval = chatPollInterval;
+        
+        console.log('✅ Chat system initialized successfully');
+        
+    } catch (error) {
+        console.error('❌ Chat system initialization error:', error);
+    }
 }
 
 // ✅ VIDEO CALL SYSTEM INITIALIZATION
