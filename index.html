@@ -182,84 +182,104 @@
 </head>
 <body>
 <!-- Enhanced Navigation -->
-<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top">
+<!-- Navigation Bar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
     <div class="container">
-        <a class="navbar-brand fw-bold" href="#" id="logo">
-            <i class="fas fa-link text-primary me-2"></i>LocalLink
+        <a class="navbar-brand" href="#" id="logo">
+            <i class="fas fa-hands-helping me-2"></i>
+            LocalLink
         </a>
-
+        
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>
         </button>
-
+        
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav me-auto">
-                <li class="nav-item" id="nav-home-item">
-                    <a class="nav-link active nav-button-outline" href="#" id="nav-home">
-                        <i class="fas fa-home nav-icon"></i>Home
+                <!-- Home -->
+                <li class="nav-item">
+                    <a class="nav-link" href="#" id="nav-home">
+                        <i class="fas fa-home me-1"></i>Home
                     </a>
                 </li>
-                <li class="nav-item d-none" id="nav-dashboard-item">
-                    <a class="nav-link nav-button-outline" href="#" id="nav-dashboard">
-                        <i class="fas fa-tachometer-alt nav-icon"></i>Dashboard
-                        <span class="nav-badge" id="dashboard-badge">3</span>
+                
+                <!-- Dashboard -->
+                <li class="nav-item" id="nav-dashboard-item">
+                    <a class="nav-link" href="#" id="nav-dashboard">
+                        <i class="fas fa-tachometer-alt me-1"></i>Dashboard
                     </a>
                 </li>
-                <li class="nav-item d-none" id="nav-skills-item">
-                    <a class="nav-link nav-button-outline" href="#" id="nav-skills">
-                        <i class="fas fa-graduation-cap nav-icon"></i>Skills
-                        <span class="nav-badge" id="skills-badge">6</span>
+                
+                <!-- Skills Marketplace -->
+                <li class="nav-item" id="nav-skills-item">
+                    <a class="nav-link" href="#" id="nav-skills">
+                        <i class="fas fa-store me-1"></i>Skills Marketplace
+                        <span class="badge bg-success ms-1" id="skills-badge" style="display: none;">0</span>
                     </a>
                 </li>
-                                <!-- Add these to your existing navbar list -->
-<li class="nav-item d-none" id="nav-requests-item">
-    <a class="nav-link nav-button-outline" href="#" id="nav-requests">
-        <i class="fas fa-clock nav-icon"></i>Pending Requests
-        <span class="nav-badge" id="requests-badge">0</span>
-    </a>
-</li>
-<li class="nav-item d-none" id="nav-chats-item">
-    <a class="nav-link nav-button-outline" href="#" id="nav-chats">
-        <i class="fas fa-comments nav-icon"></i>Chats
-        <span class="nav-badge" id="chats-badge">0</span>
-    </a>
-</li>
-                <li class="nav-item d-none" id="nav-profile-item">
-                    <a class="nav-link nav-button-outline" href="#" id="nav-profile">
-                        <i class="fas fa-user nav-icon"></i>Profile
+                
+                <!-- Chat Sessions -->
+                <li class="nav-item" id="nav-chat-item">
+                    <a class="nav-link" href="#" id="nav-chat">
+                        <i class="fas fa-comments me-1"></i>Chat
+                        <span class="badge bg-info ms-1" id="chat-badge" style="display: none;">0</span>
+                    </a>
+                </li>
+                
+                <!-- Requests -->
+                <li class="nav-item" id="nav-requests-item">
+                    <a class="nav-link" href="#" id="nav-requests">
+                        <i class="fas fa-clock me-1"></i>Requests
+                        <span class="badge bg-warning ms-1" id="requests-badge" style="display: none;">0</span>
+                    </a>
+                </li>
+                
+                <!-- Profile -->
+                <li class="nav-item" id="nav-profile-item">
+                    <a class="nav-link" href="#" id="nav-profile">
+                        <i class="fas fa-user me-1"></i>Profile
                     </a>
                 </li>
             </ul>
-
-            <!-- Guest Navigation (shown when logged out) -->
-            <div class="d-flex align-items-center" id="guest-nav">
-                <button class="btn btn-outline-primary me-2" id="btn-signin">Sign In</button>
-                <button class="btn btn-primary" id="btn-signup">Sign Up</button>
+            
+            <!-- Guest Navigation -->
+            <div id="guest-nav" class="navbar-nav">
+                <a class="nav-link" href="#" id="btn-signin">
+                    <i class="fas fa-sign-in-alt me-1"></i>Sign In
+                </a>
+                <a class="nav-link" href="#" id="btn-signup">
+                    <i class="fas fa-user-plus me-1"></i>Sign Up
+                </a>
             </div>
-
-            <!-- User Navigation (shown when logged in) -->
-            <div class="d-flex align-items-center d-none" id="user-nav">
-                <div class="dropdown">
-                    <button class="btn btn-outline-primary dropdown-toggle d-flex align-items-center" type="button" 
-                            data-bs-toggle="dropdown" aria-expanded="false">
-                        <div class="avatar avatar-sm me-2" id="user-avatar">
-                            <i class="fas fa-user"></i>
-                        </div>
+            
+            <!-- User Navigation -->
+            <div id="user-nav" class="navbar-nav d-none">
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" 
+                       data-bs-toggle="dropdown" aria-expanded="false">
+                        <span id="user-avatar" class="me-2"></span>
                         <span id="user-display-name">User</span>
-                    </button>
+                    </a>
                     <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="#" id="menu-profile"><i class="fas fa-user me-2"></i>Profile</a></li>
-                        <li><a class="dropdown-item" href="#" id="menu-dashboard"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</a></li>
-                        <li><a class="dropdown-item" href="#" id="menu-activity"><i class="fas fa-chart-line me-2"></i>Activity</a></li>
+                        <li><a class="dropdown-item" href="#" id="menu-profile">
+                            <i class="fas fa-user me-2"></i>Profile
+                        </a></li>
+                        <li><a class="dropdown-item" href="#" id="menu-dashboard">
+                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                        </a></li>
+                        <li><a class="dropdown-item" href="#" id="menu-activity">
+                            <i class="fas fa-chart-line me-2"></i>Activity
+                        </a></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-danger" href="#" id="btn-logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                        <li><a class="dropdown-item text-danger" href="#" id="btn-logout">
+                            <i class="fas fa-sign-out-alt me-2"></i>Logout
+                        </a></li>
                     </ul>
-                </div>
+                </li>
             </div>
         </div>
     </div>
 </nav>
-
     <!-- Landing Page -->
     <div id="landing-page">
         <!-- Hero Section -->
@@ -1064,66 +1084,74 @@
             </div>
         </div>
     </div>
-<!-- Pending Requests Section -->
-<div id="pending-requests-section" class="d-none">
+<!-- Requests Section -->
+<div id="requests-section" class="section d-none">
     <div class="container mt-5 pt-4">
         <div class="row mb-4">
             <div class="col-12">
-                <h2 class="section-heading mb-3">Pending Exchange Requests</h2>
-                <p class="lead text-muted">Manage your incoming and outgoing skill exchange requests</p>
-            </div>
-        </div>
-
-        <!-- Tabs for Incoming/Outgoing Requests -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <ul class="nav nav-tabs" id="requestsTab" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="incoming-tab" data-bs-toggle="tab" 
-                                data-bs-target="#incoming" type="button" role="tab">
-                            <i class="fas fa-inbox me-2"></i>Incoming Requests
-                            <span class="badge bg-primary ms-2" id="incoming-count">0</span>
+                <div class="d-flex justify-content-between align-items-center">
+                    <h2 class="text-primary mb-0">
+                        <i class="fas fa-clock me-2"></i>Exchange Requests
+                    </h2>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-primary btn-sm" onclick="loadPendingRequests()">
+                            <i class="fas fa-sync-alt me-2"></i>Refresh
                         </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="outgoing-tab" data-bs-toggle="tab" 
-                                data-bs-target="#outgoing" type="button" role="tab">
-                            <i class="fas fa-paper-plane me-2"></i>Outgoing Requests
-                            <span class="badge bg-secondary ms-2" id="outgoing-count">0</span>
+                        <button class="btn btn-primary btn-sm" onclick="showSection('skills')">
+                            <i class="fas fa-plus me-2"></i>Request Skill
                         </button>
-                    </li>
-                </ul>
-            </div>
-        </div>
-
-        <!-- Tab Content -->
-        <div class="tab-content" id="requestsTabContent">
-            <!-- Incoming Requests Tab -->
-            <div class="tab-pane fade show active" id="incoming" role="tabpanel">
-                <div class="row">
-                    <div class="col-12">
-                        <div id="incoming-requests-list" class="requests-container">
-                            <!-- Incoming requests will be populated by JavaScript -->
-                            <div class="text-center py-5">
-                                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                                <h5>No Incoming Requests</h5>
-                                <p class="text-muted">When someone requests to learn your skills, they'll appear here.</p>
-                            </div>
-                        </div>
                     </div>
                 </div>
+                <p class="text-muted mb-0">Manage your incoming and outgoing exchange requests</p>
             </div>
+        </div>
 
-            <!-- Outgoing Requests Tab -->
-            <div class="tab-pane fade" id="outgoing" role="tabpanel">
-                <div class="row">
-                    <div class="col-12">
-                        <div id="outgoing-requests-list" class="requests-container">
-                            <!-- Outgoing requests will be populated by JavaScript -->
-                            <div class="text-center py-5">
-                                <i class="fas fa-paper-plane fa-3x text-muted mb-3"></i>
-                                <h5>No Outgoing Requests</h5>
-                                <p class="text-muted">Your pending skill exchange requests will appear here.</p>
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-white">
+                        <ul class="nav nav-tabs card-header-tabs" id="requestsTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="received-tab" data-bs-toggle="tab" 
+                                        data-bs-target="#received-content" type="button" role="tab">
+                                    <i class="fas fa-inbox me-2"></i>Received
+                                    <span class="badge bg-warning ms-2" id="received-count">0</span>
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="sent-tab" data-bs-toggle="tab" 
+                                        data-bs-target="#sent-content" type="button" role="tab">
+                                    <i class="fas fa-paper-plane me-2"></i>Sent
+                                    <span class="badge bg-info ms-2" id="sent-count">0</span>
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="card-body">
+                        <div class="tab-content" id="requestsTabsContent">
+                            <!-- Received Requests -->
+                            <div class="tab-pane fade show active" id="received-content" role="tabpanel">
+                                <div id="received-requests-list">
+                                    <div class="text-center py-5">
+                                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                        <h5>No Received Requests</h5>
+                                        <p class="text-muted">You haven't received any exchange requests yet.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Sent Requests -->
+                            <div class="tab-pane fade" id="sent-content" role="tabpanel">
+                                <div id="sent-requests-list">
+                                    <div class="text-center py-5">
+                                        <i class="fas fa-paper-plane fa-3x text-muted mb-3"></i>
+                                        <h5>No Sent Requests</h5>
+                                        <p class="text-muted">You haven't sent any exchange requests yet.</p>
+                                        <button class="btn btn-primary" onclick="showSection('skills')">
+                                            Browse Skills
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1132,36 +1160,52 @@
         </div>
     </div>
 </div>
-
     <!-- Chat Sessions Section -->
-<div id="chat-sessions-section" class="d-none">
+<div id="chat-section" class="section d-none">
     <div class="container mt-5 pt-4">
-        <div class="row">
+        <div class="row mb-4">
             <div class="col-12">
-                <h2 class="section-heading mb-3">Your Conversations</h2>
-                <p class="lead text-muted">Continue your conversations with skill providers and learners</p>
+                <div class="d-flex justify-content-between align-items-center">
+                    <h2 class="text-primary mb-0">
+                        <i class="fas fa-comments me-2"></i>Chat Sessions
+                    </h2>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-primary btn-sm" onclick="loadChatSessions()">
+                            <i class="fas fa-sync-alt me-2"></i>Refresh
+                        </button>
+                        <button class="btn btn-primary btn-sm" onclick="showSection('skills')">
+                            <i class="fas fa-search me-2"></i>Find Skills
+                        </button>
+                    </div>
+                </div>
+                <p class="text-muted mb-0">Manage your conversations and skill exchanges</p>
             </div>
         </div>
 
         <div class="row">
-            <!-- Chat List Sidebar -->
-            <div class="col-lg-4 mb-4">
-                <div class="card chat-sidebar">
-                    <div class="card-header">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-white">
                         <h5 class="mb-0">Active Conversations</h5>
+                        <small class="text-muted">Click on any chat to continue the conversation</small>
                     </div>
-                    <div class="card-body p-0">
-                        <div class="chat-list" id="chat-sessions-list">
-                            <!-- Chat sessions will be populated by JavaScript -->
+                    <div class="card-body">
+                        <div id="chat-sessions-list">
                             <div class="text-center py-5">
-                                <i class="fas fa-comments fa-2x text-muted mb-3"></i>
-                                <p class="text-muted">No active conversations</p>
-                                <small class="text-muted">Start a conversation by messaging a skill provider</small>
+                                <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                                <h5>No Active Chats</h5>
+                                <p class="text-muted">Start a conversation by requesting a skill exchange.</p>
+                                <button class="btn btn-primary" onclick="showSection('skills')">
+                                    Browse Skills
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
 
             <!-- Chat Messages Area -->
             <div class="col-lg-8 mb-4">
