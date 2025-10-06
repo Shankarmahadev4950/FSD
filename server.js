@@ -1736,37 +1736,63 @@ fastify.post('/api/exchanges/request', { preHandler: authenticate }, async (requ
     try {
         const { skillId } = request.body;
         
+        // Find the skill
         const skill = await Skill.findById(skillId);
         if (!skill) {
             return reply.status(404).send({ error: 'Skill not found' });
         }
-
+        
+        // Check if user is trying to request their own skill
         if (skill.provider.toString() === request.currentUser._id.toString()) {
             return reply.status(400).send({ error: 'Cannot request your own skill' });
         }
-
+        
+        // Check for existing pending exchange
+        const existingExchange = await Exchange.findOne({
+            skill: skillId,
+            learner: request.currentUser._id,
+            status: 'pending'
+        });
+        
+        if (existingExchange) {
+            return reply.status(400).send({ error: 'You already have a pending request for this skill' });
+        }
+        
+        // Create exchange with populated data
         const exchangeData = {
             skill: skillId,
             learner: request.currentUser._id,
             provider: skill.provider,
-            hours: skill.timeRequired,
-            status: 'pending'
+            hours: skill.timeRequired || 1
         };
         
-        const exchange = new Exchange(exchangeData);
-        await exchange.save();
+        const exchange = await Exchange.createWithPopulatedData(exchangeData);
         
-        await exchange.populate('skill', 'name category timeRequired description');
-        await exchange.populate('learner', 'name email location profilePicture');
-        await exchange.populate('provider', 'name email location profilePicture');
+        // Populate the exchange for response
+        const populatedExchange = await Exchange.findById(exchange._id)
+            .populate('skill', 'name category timeRequired description')
+            .populate('learner', 'name email location profilePicture')
+            .populate('provider', 'name email location profilePicture');
         
-        return {
-            message: 'Exchange request sent successfully!',
-            exchange
+        // Notify provider via WebSocket if available
+        const providerWs = activeConnections.get(skill.provider.toString());
+        if (providerWs && providerWs.readyState === WebSocket.OPEN) {
+            providerWs.send(JSON.stringify({
+                type: 'exchange_request',
+                exchangeId: exchange._id,
+                skillName: skill.name,
+                learnerName: request.currentUser.name
+            }));
+        }
+        
+        return { 
+            message: 'Exchange request sent successfully',
+            exchange: populatedExchange
         };
+        
     } catch (error) {
-        console.error('Create exchange error:', error);
-        reply.status(500).send({ error: 'Failed to create exchange request' });
+        console.error('Exchange request error:', error);
+        reply.status(500).send({ error: 'Failed to send exchange request' });
     }
 });
 
@@ -2026,33 +2052,6 @@ fastify.post('/api/users/reset-password', async (request, reply) => {
         reply.status(500).send({ error: 'Failed to reset password' });
     }
 });
-// ✅ GET EXCHANGE BY ID
-fastify.get('/api/exchanges/:id', { preHandler: authenticate }, async (request, reply) => {
-    try {
-        const exchange = await Exchange.findById(request.params.id)
-            .populate('skill', 'name category timeRequired description')
-            .populate('learner', 'name email location profilePicture')
-            .populate('provider', 'name email location profilePicture');
-            
-        if (!exchange) {
-            return reply.status(404).send({ error: 'Exchange not found' });
-        }
-        
-        // Check if user is part of the exchange
-        const isParticipant = [exchange.provider._id.toString(), exchange.learner._id.toString()]
-            .includes(request.currentUser._id.toString());
-            
-        if (!isParticipant) {
-            return reply.status(403).send({ error: 'Not authorized to view this exchange' });
-        }
-        
-        return { exchange };
-    } catch (error) {
-        console.error('Get exchange error:', error);
-        reply.status(500).send({ error: 'Failed to get exchange' });
-    }
-});
-
 // ✅ ACCEPT EXCHANGE REQUEST
 fastify.patch('/api/exchanges/:id/accept', { preHandler: authenticate }, async (request, reply) => {
     try {
@@ -2174,6 +2173,49 @@ fastify.patch('/api/exchanges/:id/cancel', { preHandler: authenticate }, async (
     } catch (error) {
         console.error('Cancel exchange error:', error);
         reply.status(500).send({ error: 'Failed to cancel exchange' });
+    }
+});
+fastify.get('/api/exchanges', { preHandler: authenticate }, async (request, reply) => {
+    try {
+        const exchanges = await Exchange.find({
+            $or: [
+                { learner: request.currentUser._id },
+                { provider: request.currentUser._id }
+            ]
+        })
+        .populate('skill', 'name category timeRequired description')
+        .populate('learner', 'name email location profilePicture')
+        .populate('provider', 'name email location profilePicture')
+        .sort({ createdAt: -1 });
+        
+        return { exchanges };
+    } catch (error) {
+        console.error('Get exchanges error:', error);
+        reply.status(500).send({ error: 'Failed to get exchanges' });
+    }
+});
+
+// ✅ GET SPECIFIC EXCHANGE
+fastify.get('/api/exchanges/:id', { preHandler: authenticate }, async (request, reply) => {
+    try {
+        const exchange = await Exchange.findById(request.params.id)
+            .populate('skill', 'name category timeRequired description')
+            .populate('learner', 'name email location profilePicture')
+            .populate('provider', 'name email location profilePicture');
+            
+        if (!exchange) {
+            return reply.status(404).send({ error: 'Exchange not found' });
+        }
+        
+        // Check if user is part of the exchange
+        if (!exchange.isParticipant(request.currentUser._id)) {
+            return reply.status(403).send({ error: 'Not authorized to view this exchange' });
+        }
+        
+        return { exchange };
+    } catch (error) {
+        console.error('Get exchange error:', error);
+        reply.status(500).send({ error: 'Failed to get exchange' });
     }
 });
 
