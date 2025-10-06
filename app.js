@@ -482,7 +482,7 @@ function showMessagingUI(skill) {
     // Setup message sending
     setupMessageSending();
 }
-// ✅ DISPLAY MESSAGES
+// ✅ FIXED: DISPLAY MESSAGES WITH STATUS INDICATORS
 function displayMessages() {
     const container = document.getElementById('messages-container');
     const noMessages = document.getElementById('no-messages');
@@ -503,17 +503,65 @@ function displayMessages() {
                 <div class="message-meta">
                     <small class="message-time">${formatMessageTime(message.timestamp)}</small>
                     ${message.senderId === currentUser.id ? `
-                        <span class="message-status ${message.read ? 'text-primary' : 'text-muted'}">
-                            <i class="fas fa-check${message.read ? '-double' : ''}"></i>
+                        <span class="message-status ${getMessageStatusClass(message)}" title="${getMessageStatusText(message)}">
+                            <i class="fas ${getMessageStatusIcon(message)}"></i>
                         </span>
                     ` : ''}
                 </div>
             </div>
+            ${message.status === 'failed' ? `
+                <div class="message-error text-danger small">
+                    <i class="fas fa-exclamation-triangle"></i> Failed to send
+                    <button class="btn btn-sm btn-outline-danger ms-2" onclick="retryMessage('${message.id}')">Retry</button>
+                </div>
+            ` : ''}
         </div>
     `).join('');
     
     // Scroll to bottom
     container.scrollTop = container.scrollHeight;
+}
+
+// ✅ MESSAGE STATUS HELPERS
+function getMessageStatusClass(message) {
+    if (message.status === 'failed') return 'text-danger';
+    if (message.status === 'sending') return 'text-muted';
+    if (message.read) return 'text-primary';
+    return 'text-muted';
+}
+
+function getMessageStatusIcon(message) {
+    if (message.status === 'failed') return 'fa-exclamation-circle';
+    if (message.status === 'sending') return 'fa-clock';
+    if (message.read) return 'fa-check-double';
+    return 'fa-check';
+}
+
+function getMessageStatusText(message) {
+    if (message.status === 'failed') return 'Failed to send';
+    if (message.status === 'sending') return 'Sending...';
+    if (message.read) return 'Read';
+    return 'Sent';
+}
+
+// ✅ RETRY FAILED MESSAGE
+async function retryMessage(messageId) {
+    const failedMessage = messages.find(msg => msg.id === messageId);
+    if (!failedMessage) return;
+    
+    // Remove the failed message and resend
+    const messageIndex = messages.findIndex(msg => msg.id === messageId);
+    if (messageIndex !== -1) {
+        messages.splice(messageIndex, 1);
+        displayMessages();
+        
+        // Set the content and resend
+        const messageInput = document.getElementById('message-input');
+        if (messageInput) {
+            messageInput.value = failedMessage.content;
+            await sendMessage();
+        }
+    }
 }
 
 function setupFilterHandlers() {
@@ -694,7 +742,7 @@ function startVideoCall(skillId, recipientId, recipientName) {
     // All checks passed - start the call
     videoCallManager.startCall(skillId, recipientId, recipientName);
 }
-// ✅ FIXED: SEND MESSAGE FUNCTION
+// ✅ FIXED: SEND MESSAGE FUNCTION WITH PROPER STATUS
 async function sendMessage() {
     if (!currentChatSkill || !currentUser) {
         NotificationManager.show('Please select a skill and login first', 'error');
@@ -720,6 +768,20 @@ async function sendMessage() {
         
         console.log('📝 Message data:', messageData);
         
+        // Add temporary message with pending status
+        const tempMessage = {
+            id: 'temp-' + Date.now(),
+            content: content,
+            senderId: currentUser.id,
+            receiverId: currentChatSkill.providerId,
+            timestamp: new Date().toISOString(),
+            read: false,
+            status: 'sending' // Add status field
+        };
+        
+        messages.push(tempMessage);
+        displayMessages();
+        
         const response = await apiRequest('/messages/send', {
             method: 'POST',
             body: messageData
@@ -728,31 +790,42 @@ async function sendMessage() {
         console.log('✅ Message send response:', response);
         
         if (response.messageData) {
-            // Add message to local array
-            messages.push({
-                id: response.messageData.id,
-                content: content,
-                senderId: currentUser.id,
-                receiverId: currentChatSkill.providerId,
-                timestamp: response.messageData.timestamp || new Date().toISOString(),
-                read: response.messageData.read || false
-            });
+            // Replace temporary message with real one
+            const messageIndex = messages.findIndex(msg => msg.id === tempMessage.id);
+            if (messageIndex !== -1) {
+                messages[messageIndex] = {
+                    id: response.messageData.id,
+                    content: content,
+                    senderId: currentUser.id,
+                    receiverId: currentChatSkill.providerId,
+                    timestamp: response.messageData.timestamp || new Date().toISOString(),
+                    read: response.messageData.read || false,
+                    status: 'sent' // Update status
+                };
+            }
             
             // Clear input and update display
             messageInput.value = '';
             displayMessages();
             
-            NotificationManager.show('Message sent successfully!', 'success');
+            // Don't show success notification for individual messages
         } else {
             throw new Error('Invalid response from server');
         }
         
     } catch (error) {
         console.error('❌ Error sending message:', error);
+        
+        // Update message status to failed
+        const failedMessage = messages.find(msg => msg.status === 'sending');
+        if (failedMessage) {
+            failedMessage.status = 'failed';
+            displayMessages();
+        }
+        
         NotificationManager.show('Failed to send message: ' + error.message, 'error');
     }
 }
-
 // ✅ FIXED: LOAD MESSAGES FUNCTION
 async function loadMessages(skillId) {
     try {
@@ -4636,7 +4709,7 @@ function animateCounters() {
     });
 }
 
-// ✅ EXCHANGE REQUEST FUNCTION
+// ✅ ENHANCED EXCHANGE REQUEST FUNCTION WITH LOADING STATE
 async function requestExchange(skillId) {
     if (!currentUser) {
         NotificationManager.show('Please log in to request an exchange', 'error');
@@ -4644,23 +4717,261 @@ async function requestExchange(skillId) {
         return;
     }
 
+    // Find the skill to get provider info
+    const skill = filteredSkills.find(s => s.id.toString() === skillId.toString());
+    if (!skill) {
+        NotificationManager.show('Skill not found', 'error');
+        return;
+    }
+
     try {
+        // Show loading state
+        const exchangeBtn = document.querySelector(`[onclick*="${skillId}"]`);
+        const originalText = exchangeBtn?.innerHTML;
+        
+        if (exchangeBtn) {
+            exchangeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Requesting...';
+            exchangeBtn.disabled = true;
+        }
+
+        console.log('🔄 Sending exchange request for skill:', skillId);
+        
         const response = await apiRequest('/exchanges/request', {
             method: 'POST',
             body: { skillId }
         });
         
-        NotificationManager.show('Exchange request sent successfully!', 'success');
+        console.log('✅ Exchange request response:', response);
         
-        if (currentSection === 'dashboard') {
-            loadDashboard();
+        if (response.exchange) {
+            // Show pending state
+            showExchangePendingModal(skill, response.exchange);
+            NotificationManager.show('Exchange request sent successfully!', 'success');
+        } else {
+            throw new Error('Invalid response from server');
         }
+        
     } catch (error) {
         console.error('Exchange request error:', error);
+        
+        // Reset button state
+        const exchangeBtn = document.querySelector(`[onclick*="${skillId}"]`);
+        if (exchangeBtn) {
+            exchangeBtn.innerHTML = 'Exchange';
+            exchangeBtn.disabled = false;
+        }
+        
         NotificationManager.show('Failed to request exchange: ' + error.message, 'error');
     }
 }
 
+// ✅ SHOW EXCHANGE PENDING MODAL
+function showExchangePendingModal(skill, exchange) {
+    const modalHTML = `
+        <div class="modal fade" id="exchangePendingModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Exchange Request Sent</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="cancelExchangeRequest('${exchange._id || exchange.id}')"></button>
+                    </div>
+                    <div class="modal-body text-center">
+                        <div class="mb-4">
+                            <i class="fas fa-clock fa-3x text-warning mb-3"></i>
+                            <h5>Waiting for ${skill.providerName} to respond</h5>
+                            <p class="text-muted">Your request to learn "${skill.name}" has been sent.</p>
+                        </div>
+                        
+                        <div class="exchange-details mb-4 p-3 bg-light rounded">
+                            <div class="row">
+                                <div class="col-6">
+                                    <strong>Skill:</strong><br>
+                                    ${skill.name}
+                                </div>
+                                <div class="col-6">
+                                    <strong>Duration:</strong><br>
+                                    ${skill.timeRequired} hour(s)
+                                </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-12">
+                                    <strong>Teacher:</strong><br>
+                                    ${skill.providerName}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="loading-spinner mb-3">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Waiting for response...</span>
+                            </div>
+                        </div>
+                        <p class="text-muted small">Waiting for response...</p>
+                    </div>
+                    <div class="modal-footer justify-content-center">
+                        <button type="button" class="btn btn-secondary" onclick="cancelExchangeRequest('${exchange._id || exchange.id}')">
+                            <i class="fas fa-times me-2"></i>Cancel Request
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('exchangePendingModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Add new modal
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('exchangePendingModal'));
+    modal.show();
+    
+    // Start polling for exchange status
+    startExchangePolling(exchange._id || exchange.id);
+}
+
+// ✅ POLL FOR EXCHANGE STATUS UPDATES
+let exchangePollInterval = null;
+
+function startExchangePolling(exchangeId) {
+    // Clear existing interval
+    if (exchangePollInterval) {
+        clearInterval(exchangePollInterval);
+    }
+    
+    // Poll every 5 seconds
+    exchangePollInterval = setInterval(async () => {
+        try {
+            const response = await apiRequest(`/exchanges/${exchangeId}`);
+            
+            if (response.exchange) {
+                const status = response.exchange.status;
+                
+                if (status === 'accepted') {
+                    clearInterval(exchangePollInterval);
+                    showExchangeResultModal('accepted', response.exchange);
+                } else if (status === 'rejected') {
+                    clearInterval(exchangePollInterval);
+                    showExchangeResultModal('rejected', response.exchange);
+                } else if (status === 'cancelled') {
+                    clearInterval(exchangePollInterval);
+                    showExchangeResultModal('cancelled', response.exchange);
+                }
+                // If still 'pending', continue polling
+            }
+        } catch (error) {
+            console.error('Exchange polling error:', error);
+        }
+    }, 5000);
+}
+
+// ✅ SHOW EXCHANGE RESULT
+function showExchangeResultModal(result, exchange) {
+    const modalElement = document.getElementById('exchangePendingModal');
+    if (modalElement) {
+        const modal = bootstrap.Modal.getInstance(modalElement);
+        if (modal) {
+            modal.hide();
+        }
+    }
+    
+    let title, message, icon, color;
+    
+    switch (result) {
+        case 'accepted':
+            title = 'Exchange Accepted!';
+            message = `Your exchange request has been accepted! You can now start learning.`;
+            icon = 'fa-check-circle';
+            color = 'success';
+            break;
+        case 'rejected':
+            title = 'Exchange Declined';
+            message = `The teacher has declined your exchange request.`;
+            icon = 'fa-times-circle';
+            color = 'danger';
+            break;
+        case 'cancelled':
+            title = 'Exchange Cancelled';
+            message = `Your exchange request has been cancelled.`;
+            icon = 'fa-info-circle';
+            color = 'info';
+            break;
+    }
+    
+    NotificationManager.show(message, result === 'accepted' ? 'success' : 'error');
+    
+    // Show detailed result modal
+    const resultModalHTML = `
+        <div class="modal fade" id="exchangeResultModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">${title}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body text-center">
+                        <div class="mb-4">
+                            <i class="fas ${icon} fa-3x text-${color} mb-3"></i>
+                            <p>${message}</p>
+                        </div>
+                    </div>
+                    <div class="modal-footer justify-content-center">
+                        <button type="button" class="btn btn-${color}" data-bs-dismiss="modal">
+                            Close
+                        </button>
+                        ${result === 'accepted' ? `
+                            <button type="button" class="btn btn-primary" onclick="startVideoSession('${exchange._id || exchange.id}')">
+                                <i class="fas fa-video me-2"></i>Start Learning
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', resultModalHTML);
+    
+    const resultModal = new bootstrap.Modal(document.getElementById('exchangeResultModal'));
+    resultModal.show();
+    
+    // Remove modal on hide
+    document.getElementById('exchangeResultModal').addEventListener('hidden.bs.modal', function() {
+        this.remove();
+    });
+}
+
+// ✅ CANCEL EXCHANGE REQUEST
+async function cancelExchangeRequest(exchangeId) {
+    try {
+        await apiRequest(`/exchanges/${exchangeId}/cancel`, {
+            method: 'PATCH'
+        });
+        
+        if (exchangePollInterval) {
+            clearInterval(exchangePollInterval);
+        }
+        
+        const modalElement = document.getElementById('exchangePendingModal');
+        if (modalElement) {
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            if (modal) {
+                modal.hide();
+            }
+        }
+        
+        NotificationManager.show('Exchange request cancelled', 'info');
+        
+    } catch (error) {
+        console.error('Cancel exchange error:', error);
+        NotificationManager.show('Failed to cancel exchange: ' + error.message, 'error');
+    }
+}
 // ✅ SKILL SEARCH AND FILTER FUNCTIONS
 function searchSkills() {
     const searchInput = document.getElementById('skill-search');
