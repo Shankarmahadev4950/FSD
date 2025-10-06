@@ -263,6 +263,7 @@ let messages = [];
 let messageInterval = null;
 let sessionInterval = null;
 let socket = null;
+let userExchanges = []; 
 // Add event listener for Get Started button
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, setting up Get Started button');
@@ -1406,7 +1407,6 @@ function showFallbackSkills() {
     }
 }
 
-// In app.js, change these:
 async function registerUser(userData) {
     return apiRequest('/auth/register', {  // Changed from /users/register
         method: 'POST',
@@ -1418,6 +1418,19 @@ async function loginUser(credentials) {
         method: 'POST', 
         body: credentials
     });
+}
+// ✅ LOAD USER EXCHANGES AFTER LOGIN
+async function loadUserExchanges() {
+    try {
+        const response = await apiRequest('/api/exchanges/user');
+        if (response.exchanges) {
+            userExchanges = response.exchanges;
+            console.log(`✅ Loaded ${userExchanges.length} user exchanges`);
+        }
+    } catch (error) {
+        console.error('Error loading user exchanges:', error);
+        userExchanges = [];
+    }
 }
 
 // ✅ ENHANCED PROFILE UPDATE WITH NOTIFICATIONS
@@ -4727,7 +4740,7 @@ function animateCounters() {
     });
 }
 
-// ✅ ENHANCED EXCHANGE REQUEST FUNCTION
+// ✅ FIXED: EXCHANGE REQUEST FUNCTION
 async function requestExchange(skillId) {
     if (!currentUser) {
         NotificationManager.show('Please log in to request an exchange', 'error');
@@ -4743,7 +4756,7 @@ async function requestExchange(skillId) {
     }
 
     try {
-        // Show loading state - use more specific selector
+        // Show loading state - FIXED: Declare originalText properly
         const exchangeBtn = document.querySelector(`button[onclick*="requestExchange('${skillId}')"]`);
         let originalText = null;
         
@@ -4773,17 +4786,22 @@ async function requestExchange(skillId) {
     } catch (error) {
         console.error('Exchange request error:', error);
         
-        // Reset button state if button exists
+        // FIXED: Proper error handling for button reset
         const exchangeBtn = document.querySelector(`button[onclick*="requestExchange('${skillId}')"]`);
-        if (exchangeBtn && originalText) {
-            exchangeBtn.innerHTML = originalText;
+        if (exchangeBtn) {
+            // Use the stored originalText or fallback
+            exchangeBtn.innerHTML = originalText || 'Exchange';
             exchangeBtn.disabled = false;
         }
         
-        NotificationManager.show('Failed to request exchange: ' + error.message, 'error');
+        // Don't show error for duplicate requests - just inform the user
+        if (error.message.includes('already have a pending request')) {
+            NotificationManager.show('You already have a pending request for this skill', 'info');
+        } else {
+            NotificationManager.show('Failed to request exchange: ' + error.message, 'error');
+        }
     }
 }
-
 // ✅ SHOW EXCHANGE PENDING MODAL
 function showExchangePendingModal(skill, exchange) {
     const modalHTML = `
@@ -4987,6 +5005,55 @@ async function cancelExchangeRequest(exchangeId) {
         console.error('Cancel exchange error:', error);
         NotificationManager.show('Failed to cancel exchange: ' + error.message, 'error');
     }
+}
+// ✅ CHECK FOR EXISTING EXCHANGES
+async function checkExistingExchange(skillId) {
+    try {
+        const response = await apiRequest('/api/exchanges/user');
+        if (response.exchanges) {
+            const existingExchange = response.exchanges.find(exchange => 
+                exchange.skill && exchange.skill._id === skillId && 
+                exchange.status === 'pending'
+            );
+            return existingExchange;
+        }
+    } catch (error) {
+        console.error('Error checking existing exchanges:', error);
+    }
+    return null;
+}
+
+// ✅ ENHANCED EXCHANGE BUTTON RENDERING
+function renderExchangeButton(skill) {
+    // Check if user already has a pending request for this skill
+    const hasPendingRequest = userExchanges && userExchanges.some(exchange => 
+        exchange.skill && exchange.skill._id === skill.id && exchange.status === 'pending'
+    );
+    
+    if (hasPendingRequest) {
+        return `
+            <button class="btn btn-warning btn-sm mt-2" disabled>
+                <i class="fas fa-clock me-1"></i> Request Pending
+            </button>
+        `;
+    }
+    
+    // Check if user is the provider of this skill
+    if (currentUser && skill.providerId === currentUser.id) {
+        return `
+            <button class="btn btn-outline-secondary btn-sm mt-2" disabled>
+                <i class="fas fa-user me-1"></i> Your Skill
+            </button>
+        `;
+    }
+    
+    return `
+        <button class="btn btn-primary btn-sm mt-2" 
+                onclick="requestExchange('${skill.id}')"
+                ${!currentUser ? 'disabled title="Please login to request exchange"' : ''}>
+            <i class="fas fa-exchange-alt me-1"></i> Exchange
+        </button>
+    `;
 }
 // ✅ SKILL SEARCH AND FILTER FUNCTIONS
 function searchSkills() {
