@@ -97,49 +97,42 @@ fastify.post('/api/users/activity', { preHandler: authenticate }, async (request
 });
 
 const WebSocket = require('ws');
+const socketsByUser = new Map();
 const wss = new WebSocket.Server({ port: 5001 });
 wss.on('connection', (ws) => {
-    ws.on('message', (message) => {
-        const data = JSON.parse(message);
-        
-        if (data.type === 'register') {
-            // Register user connection
-            activeConnections.set(data.userId, ws);
-        }
-        
-        if (data.type === 'send_message') {
-            // Deliver message or queue if offline
-            deliverMessage(data);
-        }
-        
-        if (data.type === 'exchange_request') {
-            // Notify recipient of exchange request
-            notifyExchangeRequest(data);
-        }
-    });
-});
-// ✅ ADD ERROR HANDLING TO WEBSOCKET (replace lines 45-70)
-if (wss) {
-    wss.on('connection', (ws) => {
-        console.log('🔗 New WebSocket connection');
-        
-        ws.on('message', (message) => {
-            try {
-                const data = JSON.parse(message);
-                console.log('📨 WebSocket message:', data.type);
+    console.log('🔗 New WebSocket connection');
+    
+    ws.on('message', async (message) => {
+        try {
+            const data = JSON.parse(message);
+            console.log('📨 WebSocket message:', data.type);
+            
+            switch (data.type) {
+                case 'register':
+                    // Register user connection with authentication
+                    if (data.token) {
+                        try {
+                            const decoded = fastify.jwt.verify(data.token);
+                            const user = await User.findById(decoded.id);
+                            if (user) {
+                                socketsByUser.set(user._id.toString(), ws);
+                                console.log(`✅ WebSocket registered for user: ${user.email}`);
+                                
+                                // Send confirmation
+                                ws.send(JSON.stringify({
+                                    type: 'registered',
+                                    userId: user._id.toString()
+                                }));
+                            }
+                        } catch (error) {
+                            console.error('❌ WebSocket registration failed:', error);
+                        }
+                    }
+                    break;
                 
-                // ✅ ENHANCED: Use switch statement for better message handling
-                switch (data.type) {
-                    case 'register':
-                        // Register user connection
-                        activeConnections.set(data.userId, ws);
-                        console.log(`✅ WebSocket registered for user: ${data.userId}`);
-                        break;
-                    
-                    case 'send_message':
-                        // Deliver message or queue if offline
-                        deliverMessage(data);
-                        break;
+                case 'send_message':
+                    deliverMessage(data);
+                    break;
                     
                     case 'exchange_request':
                         // Notify recipient of exchange request
@@ -174,28 +167,27 @@ if (wss) {
                     default:
                         console.log('Unknown message type:', data.type);
                 }
-            } catch (error) {
-                console.error('WebSocket message error:', error);
-            }
-        });
-        
-        ws.on('error', (error) => {
-            console.error('WebSocket error:', error);
-        });
-        
-        ws.on('close', () => {
-            console.log('🔌 WebSocket connection closed');
-            // Remove from active connections
-            for (let [userId, connection] of activeConnections.entries()) {
-                if (connection === ws) {
-                    activeConnections.delete(userId);
-                    console.log(`✅ Removed WebSocket for user: ${userId}`);
-                    break;
-                }
-            }
-        });
+        } catch (error) {
+            console.error('WebSocket message error:', error);
+        }
     });
-}
+    
+    ws.on('error', (error) => {
+        console.error('WebSocket error:', error);
+    });
+    
+    ws.on('close', () => {
+        console.log('🔌 WebSocket connection closed');
+        // Remove from active connections
+        for (let [userId, connection] of socketsByUser.entries()) {
+            if (connection === ws) {
+                socketsByUser.delete(userId);
+                console.log(`✅ Removed WebSocket for user: ${userId}`);
+                break;
+            }
+        }
+    });
+});
 
 // ✅ ADD VIDEO CALL HANDLER FUNCTIONS TO server.js
 
@@ -1062,7 +1054,26 @@ fastify.get('/', async (request, reply) => {
     version: '1.0.0'
   };
 });
-
+process.on('notification:new', (notification, unreadCount, userId) => {
+    try {
+        console.log(`📢 Forwarding notification to user: ${userId}`);
+        
+        const socket = socketsByUser.get(userId.toString());
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({
+                type: 'notification',
+                notification: notification,
+                unreadCount: unreadCount,
+                timestamp: new Date().toISOString()
+            }));
+            console.log(`✅ Notification sent to user ${userId}`);
+        } else {
+            console.log(`⚠️ User ${userId} not connected via WebSocket`);
+        }
+    } catch (error) {
+        console.error('❌ Notification forwarding error:', error);
+    }
+});
 // ✅ NOTIFICATION ROUTES
 // Get user notifications
 fastify.get('/api/notifications', { preHandler: authenticate }, async (request, reply) => {
