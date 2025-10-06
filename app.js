@@ -334,9 +334,11 @@ const TokenManager = {
     }
 };
 // ✅ ENHANCED NOTIFICATION SYSTEM - ONLY ONLINE USER COUNTS
+// ✅ ENHANCED NOTIFICATION SYSTEM - ONLY ONLINE USER COUNTS
 const NotificationManager = {
     onlineUsersCount: 0,
-     showNotificationFromServer: function(notification) {
+    
+    showNotificationFromServer: function(notification) {
         const notificationElement = document.createElement('div');
         notificationElement.className = `alert alert-${this.getNotificationTypeClass(notification.type)} notification-toast`;
         notificationElement.style.cssText = `
@@ -397,15 +399,15 @@ const NotificationManager = {
                 badge.style.display = 'none';
             }
         }
-    }
-};
+    },
+    
     // Only show notifications for online users count
- showOnlineUsersCount: function(count) {
-    this.onlineUsersCount = typeof count === 'number' ? count : 0;
-    if (typeof this.updateNavigationBadges === 'function') {
-        this.updateNavigationBadges();
-    }
-},
+    showOnlineUsersCount: function(count) {
+        this.onlineUsersCount = typeof count === 'number' ? count : 0;
+        if (typeof this.updateNavigationBadges === 'function') {
+            this.updateNavigationBadges();
+        }
+    },
 
     // Update navigation badges with online users count
     updateNavigationBadges: function() {
@@ -430,7 +432,7 @@ const NotificationManager = {
     },
     
     // Remove all toast notifications (keep for errors only)
-    show: (message, type = 'error', duration = 3000) => {
+    show: function(message, type = 'error', duration = 3000) {
         // Only show error notifications, suppress success/info notifications
         if (type === 'error') {
             const notification = document.createElement('div');
@@ -2802,7 +2804,7 @@ function addSkillSearch(container, mode) {
 }
 
 // ✅ COMPLETE SAFE SKILL HANDLER
-// ✅ COMPLETE SAFE SKILL HANDLER - FIXED VERSION
+// ✅ HELPER FUNCTION TO HANDLE SKILL REFERENCES SAFELY
 function handleSkillReference(skill) {
     // Validate skill parameter
     if (typeof skill === 'undefined' || skill === null) {
@@ -2910,6 +2912,7 @@ function processSkills(skills) {
         .map(skill => handleSkillReference(skill))
         .filter(skill => skill !== null); // Remove invalid skills
 }
+
 
 function handleSkillSelection(skill, category, mode, isChecked) {
     const skillObj = { skill, category, mode };
