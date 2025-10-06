@@ -1075,26 +1075,22 @@ process.on('notification:new', (notification, unreadCount, userId) => {
     }
 });
 // ✅ NOTIFICATION ROUTES
-// Get user notifications
 fastify.get('/api/notifications', { preHandler: authenticate }, async (request, reply) => {
     try {
-        const { page = 1, limit = 20, unreadOnly = false, type = null } = request.query;
+        const notifications = await Notification.find({ 
+            user: request.currentUser._id 
+        })
+        .sort({ createdAt: -1 })
+        .limit(50);
         
-        const notifications = await Notification.getUserNotifications(
-            request.currentUser._id, 
-            { page: parseInt(page), limit: parseInt(limit), unreadOnly: unreadOnly === 'true', type }
-        );
-        
-        const unreadCount = await Notification.getUnreadCount(request.currentUser._id);
+        const unreadCount = await Notification.countDocuments({
+            user: request.currentUser._id,
+            isRead: false
+        });
         
         return {
             notifications,
-            unreadCount,
-            pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
-                hasMore: notifications.length === parseInt(limit)
-            }
+            unreadCount
         };
     } catch (error) {
         console.error('Get notifications error:', error);
@@ -1102,27 +1098,26 @@ fastify.get('/api/notifications', { preHandler: authenticate }, async (request, 
     }
 });
 
-// Mark notification as read
 fastify.patch('/api/notifications/:id/read', { preHandler: authenticate }, async (request, reply) => {
     try {
-        const notification = await Notification.findOne({
-            _id: request.params.id,
-            user: request.currentUser._id
+        await Notification.findByIdAndUpdate(request.params.id, {
+            isRead: true
         });
         
-        if (!notification) {
-            return reply.status(404).send({ error: 'Notification not found' });
-        }
+        const unreadCount = await Notification.countDocuments({
+            user: request.currentUser._id,
+            isRead: false
+        });
         
-        await notification.markAsRead();
-        
-        return { message: 'Notification marked as read', notification };
+        return {
+            message: 'Notification marked as read',
+            unreadCount
+        };
     } catch (error) {
-        console.error('Mark as read error:', error);
+        console.error('Mark notification as read error:', error);
         reply.status(500).send({ error: 'Failed to mark notification as read' });
     }
 });
-
 // Mark all notifications as read
 fastify.patch('/api/notifications/read-all', { preHandler: authenticate }, async (request, reply) => {
     try {
