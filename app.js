@@ -5927,13 +5927,22 @@ window.handleSkillInputKeypress = function(event, type) {
     }
 };
 
-(skill) {
+(skill) => {
     if (!skill) {
         console.warn('Skill parameter is required');
         return;
     }
     console.log(skill.name);
 }
+// ✅ ASSIGN TO VARIABLE OR USE AS CALLBACK
+const handleSkill = (skill) => {
+    if (!skill) {
+        console.warn('Skill parameter is required');
+        return;
+    }
+    console.log(skill.name);
+}
+
 
 function handlePageRefresh() {
     // Clear any pending form data
