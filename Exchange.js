@@ -23,7 +23,6 @@ const exchangeSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        // ✅ UPDATED: Align status with frontend expectations
         enum: ['pending', 'accepted', 'in-progress', 'completed', 'rejected', 'cancelled'],
         default: 'pending'
     },
@@ -33,7 +32,18 @@ const exchangeSchema = new mongoose.Schema({
     completedDate: {
         type: Date
     },
-    // ✅ ADDED: Skill details for easier querying
+    // ✅ ADDED: Track when the exchange was responded to
+    respondedAt: {
+        type: Date
+    },
+    // ✅ ADDED: Reason for rejection
+    rejectionReason: {
+        type: String
+    },
+    // ✅ ADDED: Track when cancelled
+    cancelledAt: {
+        type: Date
+    },
     skillName: {
         type: String
     },
@@ -58,37 +68,75 @@ const exchangeSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// ✅ ADDED: Pre-save middleware to populate names
-exchangeSchema.pre('save', async function(next) {
-    if (this.isNew) {
-        try {
-            const User = mongoose.model('User');
-            const Skill = mongoose.model('Skill');
-            
-            // Populate learner name
-            if (this.learner && !this.learnerName) {
-                const learner = await User.findById(this.learner);
-                if (learner) this.learnerName = learner.name;
+// ✅ IMPROVED: Static method to create exchange with populated data
+exchangeSchema.statics.createWithPopulatedData = async function(exchangeData) {
+    const User = mongoose.model('User');
+    const Skill = mongoose.model('Skill');
+    
+    try {
+        // Fetch user and skill data in parallel
+        const [learner, provider, skill] = await Promise.all([
+            User.findById(exchangeData.learner),
+            User.findById(exchangeData.provider),
+            Skill.findById(exchangeData.skill)
+        ]);
+        
+        // Add populated data
+        if (learner) exchangeData.learnerName = learner.name;
+        if (provider) exchangeData.providerName = provider.name;
+        if (skill) {
+            exchangeData.skillName = skill.name;
+            exchangeData.skillCategory = skill.category;
+            // Use skill's timeRequired if hours not provided
+            if (!exchangeData.hours && skill.timeRequired) {
+                exchangeData.hours = skill.timeRequired;
             }
-            
-            // Populate provider name
-            if (this.provider && !this.providerName) {
-                const provider = await User.findById(this.provider);
-                if (provider) this.providerName = provider.name;
-            }
-            
-            // Populate skill details
-            if (this.skill && (!this.skillName || !this.skillCategory)) {
-                const skill = await Skill.findById(this.skill);
-                if (skill) {
-                    this.skillName = skill.name;
-                    this.skillCategory = skill.category;
-                }
-            }
-        } catch (error) {
-            console.error('Error populating exchange details:', error);
         }
+        
+        return this.create(exchangeData);
+    } catch (error) {
+        console.error('Error creating exchange with populated data:', error);
+        throw error;
     }
+};
+
+// ✅ ADDED: Virtual for formatted status
+exchangeSchema.virtual('statusFormatted').get(function() {
+    const statusMap = {
+        'pending': 'Pending',
+        'accepted': 'Accepted', 
+        'in-progress': 'In Progress',
+        'completed': 'Completed',
+        'rejected': 'Rejected',
+        'cancelled': 'Cancelled'
+    };
+    return statusMap[this.status] || this.status;
+});
+
+// ✅ ADDED: Method to check if user can modify exchange
+exchangeSchema.methods.canModify = function(userId) {
+    return this.learner.toString() === userId.toString() || 
+           this.provider.toString() === userId.toString();
+};
+
+// ✅ ADDED: Method to check if user is participant
+exchangeSchema.methods.isParticipant = function(userId) {
+    return this.learner.toString() === userId.toString() || 
+           this.provider.toString() === userId.toString();
+};
+
+// ✅ ENHANCED: Pre-save middleware (simplified)
+exchangeSchema.pre('save', function(next) {
+    // Set respondedAt when status changes from pending
+    if (this.isModified('status') && this.status !== 'pending' && !this.respondedAt) {
+        this.respondedAt = new Date();
+    }
+    
+    // Set cancelledAt when status changes to cancelled
+    if (this.isModified('status') && this.status === 'cancelled' && !this.cancelledAt) {
+        this.cancelledAt = new Date();
+    }
+    
     next();
 });
 
