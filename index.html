@@ -518,37 +518,215 @@
         </section>
     </div>
 
-    <!-- Activity Content -->
-    <div id="activity-content" class="d-none">
-        <div class="container mt-5 pt-4">
-            <div class="row mb-4">
-                <div class="col-12">
+  <!-- Activity Content -->
+<div id="activity-content" class="d-none">
+    <div class="container mt-5 pt-4">
+        <!-- Header with Back Button and Title -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
                     <button class="btn btn-outline-primary btn-sm" onclick="toggleActivityView()">
-                        <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
+                        <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
                     </button>
+                    <h3 class="mb-0 text-primary">
+                        <i class="fas fa-chart-line me-2"></i>Activity Dashboard
+                    </h3>
+                    <div class="text-muted small">
+                        Last updated: <span id="activity-last-updated">Just now</span>
+                    </div>
                 </div>
             </div>
-            
-            <div class="row">
-                <div class="col-lg-8 mb-4">
-                    <div id="daily-activity-chart"></div>
-                </div>
-                <div class="col-lg-4 mb-4">
-                    <div id="weekly-stats"></div>
+        </div>
+
+        <!-- Quick Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-primary shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="card-title text-muted mb-2">Total Hours</h6>
+                                <h3 class="text-primary mb-0" id="stats-total-hours">0</h3>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-clock fa-2x text-primary opacity-25"></i>
+                            </div>
+                        </div>
+                        <p class="text-muted small mb-0">Time spent learning</p>
+                    </div>
                 </div>
             </div>
-            
-            <div class="row">
-                <div class="col-lg-6 mb-4">
-                    <div id="skill-history"></div>
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-success shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="card-title text-muted mb-2">Skills Learned</h6>
+                                <h3 class="text-success mb-0" id="stats-skills-learned">0</h3>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-graduation-cap fa-2x text-success opacity-25"></i>
+                            </div>
+                        </div>
+                        <p class="text-muted small mb-0">Skills mastered</p>
+                    </div>
                 </div>
-                <div class="col-lg-6 mb-4">
-                    <div id="courses-completed"></div>
+            </div>
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-info shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="card-title text-muted mb-2">Courses Completed</h6>
+                                <h3 class="text-info mb-0" id="stats-courses-completed">0</h3>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-trophy fa-2x text-info opacity-25"></i>
+                            </div>
+                        </div>
+                        <p class="text-muted small mb-0">Courses finished</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-warning shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="card-title text-muted mb-2">Active Streak</h6>
+                                <h3 class="text-warning mb-0" id="stats-active-streak">0</h3>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-fire fa-2x text-warning opacity-25"></i>
+                            </div>
+                        </div>
+                        <p class="text-muted small mb-0">Days in a row</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts and Progress Section -->
+        <div class="row">
+            <!-- Weekly Activity Chart -->
+            <div class="col-lg-8 mb-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-bar me-2 text-primary"></i>
+                            Weekly Activity Hours
+                        </h5>
+                        <small class="text-muted">Hours spent learning and teaching this week</small>
+                    </div>
+                    <div class="card-body">
+                        <div id="daily-activity-chart" style="min-height: 300px;">
+                            <div class="text-center py-5">
+                                <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">Loading activity data...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Overview -->
+            <div class="col-lg-4 mb-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-tachometer-alt me-2 text-success"></i>
+                            Progress Overview
+                        </h5>
+                        <small class="text-muted">Your learning journey</small>
+                    </div>
+                    <div class="card-body">
+                        <div id="weekly-stats">
+                            <div class="text-center py-4">
+                                <i class="fas fa-tachometer-alt fa-2x text-muted mb-3"></i>
+                                <p class="text-muted">Loading progress data...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Skills and Courses Section -->
+        <div class="row">
+            <!-- Skills Progress -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-graduation-cap me-2 text-info"></i>
+                            Skills Progress
+                        </h5>
+                        <small class="text-muted">Your skill development journey</small>
+                    </div>
+                    <div class="card-body">
+                        <div id="skill-history" style="max-height: 400px; overflow-y: auto;">
+                            <div class="text-center py-4">
+                                <i class="fas fa-graduation-cap fa-2x text-muted mb-3"></i>
+                                <p class="text-muted">No skills learned yet</p>
+                                <button class="btn btn-primary btn-sm" onclick="showSection('skills')">
+                                    Browse Skills
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Courses Completed -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-trophy me-2 text-warning"></i>
+                            Learning Achievements
+                        </h5>
+                        <small class="text-muted">Your completed courses and milestones</small>
+                    </div>
+                    <div class="card-body">
+                        <div id="courses-completed">
+                            <div class="text-center py-4">
+                                <i class="fas fa-trophy fa-2x text-muted mb-3"></i>
+                                <p class="text-muted">No courses completed yet</p>
+                                <button class="btn btn-primary btn-sm" onclick="showSection('skills')">
+                                    Start Learning
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="row">
+            <div class="col-12 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-history me-2 text-secondary"></i>
+                            Recent Activity
+                        </h5>
+                        <small class="text-muted">Your latest learning sessions</small>
+                    </div>
+                    <div class="card-body">
+                        <div id="recent-activity" class="list-group list-group-flush">
+                            <div class="list-group-item text-center py-4">
+                                <i class="fas fa-history fa-2x text-muted mb-3"></i>
+                                <p class="text-muted mb-2">No recent activity</p>
+                                <small class="text-muted">Start learning to see your activity here</small>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-
+</div>
     <!-- Authentication Section -->
 <div id="auth-section" class="d-none">
     <div class="container-fluid min-vh-100 d-flex align-items-center justify-content-center bg-light">
