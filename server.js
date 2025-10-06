@@ -2332,7 +2332,145 @@ fastify.post('/api/messages/send-to-exchange', { preHandler: authenticate }, asy
         reply.status(500).send({ error: 'Failed to send message' });
     }
 });
+// ✅ GET USER'S PENDING EXCHANGES
+fastify.get('/api/exchanges/user/pending', { preHandler: authenticate }, async (request, reply) => {
+    try {
+        const userId = request.currentUser._id;
+        
+        const pendingExchanges = await Exchange.find({
+            $or: [
+                { learner: userId, status: 'pending' },
+                { provider: userId, status: 'pending' }
+            ]
+        })
+        .populate('skill', 'name category')
+        .populate('learner', 'name email profilePicture')
+        .populate('provider', 'name email profilePicture')
+        .sort({ createdAt: -1 });
+        
+        // Add type information
+        const exchangesWithType = pendingExchanges.map(exchange => ({
+            ...exchange.toObject(),
+            type: exchange.learner._id.toString() === userId.toString() ? 'sent' : 'received'
+        }));
+        
+        return { exchanges: exchangesWithType };
+    } catch (error) {
+        console.error('Get pending exchanges error:', error);
+        reply.status(500).send({ error: 'Failed to get pending exchanges' });
+    }
+});
 
+// ✅ GET RECENT CHATS
+fastify.get('/api/messages/recent', { preHandler: authenticate }, async (request, reply) => {
+    try {
+        const userId = request.currentUser._id;
+        
+        const recentMessages = await Message.find({
+            $or: [
+                { sender: userId },
+                { receiver: userId }
+            ]
+        })
+        .populate('sender', 'name profilePicture')
+        .populate('receiver', 'name profilePicture')
+        .populate('skill', 'name')
+        .sort({ timestamp: -1 })
+        .limit(20);
+        
+        // Group by skill and other user
+        const chatMap = new Map();
+        
+        recentMessages.forEach(message => {
+            const otherUser = message.sender._id.toString() === userId.toString() ? 
+                message.receiver : message.sender;
+            const skillId = message.skill?._id.toString();
+            
+            const key = `${skillId}-${otherUser._id}`;
+            
+            if (!chatMap.has(key)) {
+                chatMap.set(key, {
+                    skillId: skillId,
+                    skillName: message.skill?.name,
+                    otherUser: otherUser,
+                    lastMessage: message,
+                    unreadCount: 0,
+                    createdAt: message.timestamp
+                });
+            }
+            
+            const chat = chatMap.get(key);
+            if (!message.read && message.receiver._id.toString() === userId.toString()) {
+                chat.unreadCount++;
+            }
+        });
+        
+        const chats = Array.from(chatMap.values());
+        
+        return { chats };
+    } catch (error) {
+        console.error('Get recent chats error:', error);
+        reply.status(500).send({ error: 'Failed to get recent chats' });
+    }
+});
+
+// ✅ EXCHANGE ACTIONS
+fastify.patch('/api/exchanges/:id/accept', { preHandler: authenticate }, async (request, reply) => {
+    try {
+        const exchange = await Exchange.findByIdAndUpdate(
+            request.params.id,
+            { status: 'accepted', acceptedAt: new Date() },
+            { new: true }
+        );
+        
+        if (!exchange) {
+            return reply.status(404).send({ error: 'Exchange not found' });
+        }
+        
+        return { message: 'Exchange accepted successfully', exchange };
+    } catch (error) {
+        console.error('Accept exchange error:', error);
+        reply.status(500).send({ error: 'Failed to accept exchange' });
+    }
+});
+
+fastify.patch('/api/exchanges/:id/reject', { preHandler: authenticate }, async (request, reply) => {
+    try {
+        const exchange = await Exchange.findByIdAndUpdate(
+            request.params.id,
+            { status: 'rejected', rejectedAt: new Date() },
+            { new: true }
+        );
+        
+        if (!exchange) {
+            return reply.status(404).send({ error: 'Exchange not found' });
+        }
+        
+        return { message: 'Exchange rejected successfully', exchange };
+    } catch (error) {
+        console.error('Reject exchange error:', error);
+        reply.status(500).send({ error: 'Failed to reject exchange' });
+    }
+});
+
+fastify.patch('/api/exchanges/:id/cancel', { preHandler: authenticate }, async (request, reply) => {
+    try {
+        const exchange = await Exchange.findByIdAndUpdate(
+            request.params.id,
+            { status: 'cancelled', cancelledAt: new Date() },
+            { new: true }
+        );
+        
+        if (!exchange) {
+            return reply.status(404).send({ error: 'Exchange not found' });
+        }
+        
+        return { message: 'Exchange cancelled successfully', exchange };
+    } catch (error) {
+        console.error('Cancel exchange error:', error);
+        reply.status(500).send({ error: 'Failed to cancel exchange' });
+    }
+});
 // Start the server
 // ✅ ENHANCED SERVER STARTUP (replace lines 1140-1165)
 const start = async () => {
