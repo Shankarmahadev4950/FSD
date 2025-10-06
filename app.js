@@ -257,15 +257,18 @@ const appData = {
 };
 
 // ✅ MOVE THESE TO TOP WITH OTHER VARIABLES (around line 60)
-let exchangePollInterval = null;
 let currentChatSkill = null;
 let messages = [];
 let messageInterval = null;
 let sessionInterval = null;
-let socket = null;
-let userExchanges = []; 
-let chatSessions = [];
-let currentChatSession = null;
+let isSubmitting = false;
+let currentUser = null;
+let currentSection = 'landing';
+let filteredSkills = [];
+let selectedSkills = [];
+let currentGetStartedMode = null;
+let authToken = null;
+let resetEmail = '';
 // Add event listener for Get Started button
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, setting up Get Started button');
@@ -289,20 +292,11 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Get Started modal element not found');
     }
 });
-// Application State
-let isSubmitting = false;
-let currentUser = null;
-let currentSection = 'landing';
-let filteredSkills = [];
-let selectedSkills = [];
-let currentGetStartedMode = null;
-let authToken = null;
-let resetEmail = '';
 
 // API Base URL
 const API_BASE = 'https://fsd-locallink.onrender.com/api';
 
-// ✅ TOKEN MANAGEMENT - Persistent Sessions
+// ✅ FIXED TOKEN MANAGEMENT
 const TokenManager = {
     setToken: (token) => {
         authToken = token;
@@ -317,6 +311,11 @@ const TokenManager = {
     },
     
     removeToken: () => {
+        authToken = null;
+        localStorage.removeItem('locallink_token');
+    },
+    
+    clearToken: () => { // Add this missing function
         authToken = null;
         localStorage.removeItem('locallink_token');
     },
