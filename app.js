@@ -1296,6 +1296,54 @@ function showActivityDashboard() {
     }
 }
 
+// ✅ FALLBACK ACTIVITY DASHBOARD
+function showActivityDashboardFallback() {
+    const mainContent = document.querySelector('#dashboard-section .container');
+    if (!mainContent) return;
+    
+    mainContent.innerHTML = `
+        <div class="row mb-4">
+            <div class="col-12">
+                <button class="btn btn-outline-primary btn-sm" onclick="location.reload()">
+                    <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
+                </button>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="mb-0">Activity Dashboard</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="text-center py-4">
+                            <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                            <h5>Activity Tracking</h5>
+                            <p class="text-muted">Your learning progress and activity statistics will appear here.</p>
+                            <div class="mt-4">
+                                <div class="row text-center">
+                                    <div class="col-4">
+                                        <div class="stat-value text-primary">0</div>
+                                        <div class="stat-label small text-muted">Total Hours</div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="stat-value text-success">0</div>
+                                        <div class="stat-label small text-muted">Courses Completed</div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="stat-value text-info">0</div>
+                                        <div class="stat-label small text-muted">Skills Learned</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
 // ✅ NAVIGATE TO PROFILE SKILLS SECTION
 function navigateToProfileSkills() {
     showSection('profile');
@@ -3557,6 +3605,9 @@ function toggleActivityView() {
     
     if (!dashboardContent || !activityContent) {
         console.error('Dashboard or activity content elements not found');
+        
+        // Create fallback activity view
+        showActivityDashboardFallback();
         return;
     }
     
@@ -4786,7 +4837,6 @@ function animateCounters() {
     });
 }
 
-// ✅ FIXED: EXCHANGE REQUEST FUNCTION
 async function requestExchange(skillId) {
     if (!currentUser) {
         NotificationManager.show('Please log in to request an exchange', 'error');
@@ -4794,57 +4844,42 @@ async function requestExchange(skillId) {
         return;
     }
 
-    // Find the skill to get provider info
-    const skill = filteredSkills.find(s => s.id.toString() === skillId.toString());
-    if (!skill) {
-        NotificationManager.show('Skill not found', 'error');
-        return;
-    }
+    const exchangeBtn = document.querySelector(`[onclick*="${skillId}"]`);
+    const originalText = exchangeBtn ? exchangeBtn.innerHTML : 'Exchange';
 
     try {
-        // Show loading state - FIXED: Declare originalText properly
-        const exchangeBtn = document.querySelector(`button[onclick*="requestExchange('${skillId}')"]`);
-        let originalText = null;
+        console.log('🔄 Sending exchange request for skill:', skillId);
         
+        // Disable button and show loading state
         if (exchangeBtn) {
-            originalText = exchangeBtn.innerHTML;
-            exchangeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Requesting...';
+            exchangeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             exchangeBtn.disabled = true;
         }
 
-        console.log('🔄 Sending exchange request for skill:', skillId);
-        
         const response = await apiRequest('/exchanges/request', {
             method: 'POST',
             body: { skillId }
         });
         
-        console.log('✅ Exchange request response:', response);
+        NotificationManager.show('Exchange request sent successfully!', 'success');
         
-        if (response.exchange) {
-            // Show pending state
-            showExchangePendingModal(skill, response.exchange);
-            NotificationManager.show('Exchange request sent successfully!', 'success');
-        } else {
-            throw new Error('Invalid response from server');
+        if (currentSection === 'dashboard') {
+            loadDashboard();
         }
-        
     } catch (error) {
         console.error('Exchange request error:', error);
         
-        // FIXED: Proper error handling for button reset
-        const exchangeBtn = document.querySelector(`button[onclick*="requestExchange('${skillId}')"]`);
-        if (exchangeBtn) {
-            // Use the stored originalText or fallback
-            exchangeBtn.innerHTML = originalText || 'Exchange';
-            exchangeBtn.disabled = false;
-        }
-        
-        // Don't show error for duplicate requests - just inform the user
+        // Show specific error message for duplicate requests
         if (error.message.includes('already have a pending request')) {
-            NotificationManager.show('You already have a pending request for this skill', 'info');
+            NotificationManager.show('You already have a pending exchange request for this skill', 'info');
         } else {
             NotificationManager.show('Failed to request exchange: ' + error.message, 'error');
+        }
+    } finally {
+        // Re-enable button
+        if (exchangeBtn) {
+            exchangeBtn.innerHTML = originalText;
+            exchangeBtn.disabled = false;
         }
     }
 }
