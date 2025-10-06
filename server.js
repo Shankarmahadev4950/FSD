@@ -2219,6 +2219,120 @@ fastify.get('/api/exchanges/:id', { preHandler: authenticate }, async (request, 
     }
 });
 
+// ✅ GET INCOMING EXCHANGE REQUESTS
+fastify.get('/api/exchanges/incoming', { preHandler: authenticate }, async (request, reply) => {
+    try {
+        const exchanges = await Exchange.find({
+            provider: request.currentUser._id,
+            status: 'pending'
+        })
+        .populate('learner', 'name email profilePicture')
+        .populate('skill', 'name category')
+        .sort({ createdAt: -1 });
+        
+        return { exchanges };
+    } catch (error) {
+        console.error('Get incoming exchanges error:', error);
+        reply.status(500).send({ error: 'Failed to get incoming exchanges' });
+    }
+});
+
+// ✅ GET OUTGOING EXCHANGE REQUESTS
+fastify.get('/api/exchanges/outgoing', { preHandler: authenticate }, async (request, reply) => {
+    try {
+        const exchanges = await Exchange.find({
+            learner: request.currentUser._id,
+            status: 'pending'
+        })
+        .populate('provider', 'name email profilePicture')
+        .populate('skill', 'name category')
+        .sort({ createdAt: -1 });
+        
+        return { exchanges };
+    } catch (error) {
+        console.error('Get outgoing exchanges error:', error);
+        reply.status(500).send({ error: 'Failed to get outgoing exchanges' });
+    }
+});
+
+// ✅ GET ACCEPTED EXCHANGES (FOR CHAT SESSIONS)
+fastify.get('/api/exchanges/accepted', { preHandler: authenticate }, async (request, reply) => {
+    try {
+        const exchanges = await Exchange.find({
+            $or: [
+                { provider: request.currentUser._id },
+                { learner: request.currentUser._id }
+            ],
+            status: 'accepted'
+        })
+        .populate('provider', 'name email profilePicture')
+        .populate('learner', 'name email profilePicture')
+        .populate('skill', 'name category')
+        .sort({ updatedAt: -1 });
+        
+        return { exchanges };
+    } catch (error) {
+        console.error('Get accepted exchanges error:', error);
+        reply.status(500).send({ error: 'Failed to get accepted exchanges' });
+    }
+});
+
+// ✅ GET MESSAGES FOR EXCHANGE
+fastify.get('/api/messages/exchange/:exchangeId', { preHandler: authenticate }, async (request, reply) => {
+    try {
+        const { exchangeId } = request.params;
+        
+        const messages = await Message.find({
+            exchange: exchangeId
+        })
+        .populate('sender', 'name profilePicture')
+        .sort({ timestamp: 1 });
+        
+        return { messages };
+    } catch (error) {
+        console.error('Get exchange messages error:', error);
+        reply.status(500).send({ error: 'Failed to get messages' });
+    }
+});
+
+// ✅ SEND MESSAGE TO EXCHANGE
+fastify.post('/api/messages/send-to-exchange', { preHandler: authenticate }, async (request, reply) => {
+    try {
+        const { exchangeId, content } = request.body;
+        
+        if (!exchangeId || !content) {
+            return reply.status(400).send({ error: 'Exchange ID and content are required' });
+        }
+        
+        // Verify user is part of the exchange
+        const exchange = await Exchange.findById(exchangeId);
+        if (!exchange || 
+            (exchange.provider.toString() !== request.currentUser._id.toString() && 
+             exchange.learner.toString() !== request.currentUser._id.toString())) {
+            return reply.status(403).send({ error: 'Not authorized to send messages in this exchange' });
+        }
+        
+        const messageData = {
+            exchange: exchangeId,
+            sender: request.currentUser._id,
+            content: content.trim()
+        };
+        
+        const message = new Message(messageData);
+        await message.save();
+        
+        await message.populate('sender', 'name profilePicture');
+        
+        return {
+            message: 'Message sent successfully!',
+            messageData: message
+        };
+    } catch (error) {
+        console.error('Send message error:', error);
+        reply.status(500).send({ error: 'Failed to send message' });
+    }
+});
+
 // Start the server
 // ✅ ENHANCED SERVER STARTUP (replace lines 1140-1165)
 const start = async () => {
