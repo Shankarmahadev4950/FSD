@@ -5929,7 +5929,7 @@ window.handleSkillInputKeypress = function(event, type) {
     }
 };
 
-function someFunction(skill) {
+(skill) {
     if (!skill) {
         console.warn('Skill parameter is required');
         return;
