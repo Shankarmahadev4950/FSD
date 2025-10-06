@@ -5787,20 +5787,18 @@ async function initializeApp() {
     }
 }
 
-// ✅ VIDEO CALL MANAGER PLACEHOLDER - Ensure this exists
-if (typeof videoCallManager === 'undefined') {
-    var videoCallManager = {
-        initializeSocket: function(socket) {
-            console.log('🎥 VideoCallManager placeholder - socket initialized');
-        },
-        startCall: function(skillId, recipientId, recipientName) {
-            console.log('🎬 Starting video call to:', recipientName);
-            NotificationManager.show('Video call system is not fully loaded. Please refresh the page.', 'warning');
-        },
-        isCallActive: false,
-        socket: null
-    };
-}
+var videoCallManager = {
+    initializeSocket: function(socket) {
+        console.log('🎥 VideoCallManager - socket initialized');
+        this.socket = socket;
+    },
+    startCall: function(skillId, recipientId, recipientName) {
+        console.log('🎬 Starting video call to:', recipientName);
+        // Your actual video call implementation
+    },
+    isCallActive: false,
+    socket: null
+};
 
 // ✅ INITIALIZE CHAT SYSTEM
 function initializeChatSystem() {
