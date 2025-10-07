@@ -32,18 +32,6 @@ const exchangeSchema = new mongoose.Schema({
     completedDate: {
         type: Date
     },
-    // ✅ ADDED: Track when the exchange was responded to
-    respondedAt: {
-        type: Date
-    },
-    // ✅ ADDED: Reason for rejection
-    rejectionReason: {
-        type: String
-    },
-    // ✅ ADDED: Track when cancelled
-    cancelledAt: {
-        type: Date
-    },
     skillName: {
         type: String
     },
@@ -68,76 +56,107 @@ const exchangeSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// ✅ IMPROVED: Static method to create exchange with populated data
-exchangeSchema.statics.createWithPopulatedData = async function(exchangeData) {
-    const User = mongoose.model('User');
-    const Skill = mongoose.model('Skill');
-    
-    try {
-        // Fetch user and skill data in parallel
-        const [learner, provider, skill] = await Promise.all([
-            User.findById(exchangeData.learner),
-            User.findById(exchangeData.provider),
-            Skill.findById(exchangeData.skill)
-        ]);
-        
-        // Add populated data
-        if (learner) exchangeData.learnerName = learner.name;
-        if (provider) exchangeData.providerName = provider.name;
-        if (skill) {
-            exchangeData.skillName = skill.name;
-            exchangeData.skillCategory = skill.category;
-            // Use skill's timeRequired if hours not provided
-            if (!exchangeData.hours && skill.timeRequired) {
-                exchangeData.hours = skill.timeRequired;
+// ✅ IMPROVED: Pre-save middleware with better error handling
+exchangeSchema.pre('save', async function(next) {
+    if (this.isNew) {
+        try {
+            const User = mongoose.model('User');
+            const Skill = mongoose.model('Skill');
+            
+            // Populate learner name with error handling
+            if (this.learner && !this.learnerName) {
+                try {
+                    const learner = await User.findById(this.learner);
+                    if (learner) {
+                        this.learnerName = learner.name;
+                    } else {
+                        console.warn(`⚠️ Learner not found for exchange: ${this.learner}`);
+                        this.learnerName = 'Unknown User';
+                    }
+                } catch (error) {
+                    console.error('Error populating learner:', error);
+                    this.learnerName = 'Unknown User';
+                }
             }
+            
+            // Populate provider name with error handling
+            if (this.provider && !this.providerName) {
+                try {
+                    const provider = await User.findById(this.provider);
+                    if (provider) {
+                        this.providerName = provider.name;
+                    } else {
+                        console.warn(`⚠️ Provider not found for exchange: ${this.provider}`);
+                        this.providerName = 'Unknown User';
+                    }
+                } catch (error) {
+                    console.error('Error populating provider:', error);
+                    this.providerName = 'Unknown User';
+                }
+            }
+            
+            // Populate skill details with error handling
+            if (this.skill && (!this.skillName || !this.skillCategory)) {
+                try {
+                    const skill = await Skill.findById(this.skill);
+                    if (skill) {
+                        this.skillName = skill.name;
+                        this.skillCategory = skill.category;
+                    } else {
+                        console.warn(`⚠️ Skill not found for exchange: ${this.skill}`);
+                        this.skillName = 'Unknown Skill';
+                        this.skillCategory = 'Unknown Category';
+                    }
+                } catch (error) {
+                    console.error('Error populating skill:', error);
+                    this.skillName = 'Unknown Skill';
+                    this.skillCategory = 'Unknown Category';
+                }
+            }
+        } catch (error) {
+            console.error('Unexpected error in exchange pre-save middleware:', error);
+            // Don't block the save operation
         }
-        
-        return this.create(exchangeData);
+    }
+    next();
+});
+
+// ✅ ADD STATIC METHOD FOR SAFE EXCHANGE CREATION
+exchangeSchema.statics.createWithValidation = async function(exchangeData) {
+    try {
+        // Validate required fields
+        if (!exchangeData.skill || !exchangeData.learner || !exchangeData.provider) {
+            throw new Error('Skill, learner, and provider are required');
+        }
+
+        // Check if skill exists
+        const Skill = mongoose.model('Skill');
+        const skill = await Skill.findById(exchangeData.skill);
+        if (!skill) {
+            throw new Error('Skill not found');
+        }
+
+        // Check if users exist
+        const User = mongoose.model('User');
+        const [learner, provider] = await Promise.all([
+            User.findById(exchangeData.learner),
+            User.findById(exchangeData.provider)
+        ]);
+
+        if (!learner) {
+            throw new Error('Learner not found');
+        }
+        if (!provider) {
+            throw new Error('Provider not found');
+        }
+
+        // Create the exchange
+        const exchange = new this(exchangeData);
+        return await exchange.save();
     } catch (error) {
-        console.error('Error creating exchange with populated data:', error);
+        console.error('Exchange creation error:', error);
         throw error;
     }
 };
-
-// ✅ ADDED: Virtual for formatted status
-exchangeSchema.virtual('statusFormatted').get(function() {
-    const statusMap = {
-        'pending': 'Pending',
-        'accepted': 'Accepted', 
-        'in-progress': 'In Progress',
-        'completed': 'Completed',
-        'rejected': 'Rejected',
-        'cancelled': 'Cancelled'
-    };
-    return statusMap[this.status] || this.status;
-});
-
-// ✅ ADDED: Method to check if user can modify exchange
-exchangeSchema.methods.canModify = function(userId) {
-    return this.learner.toString() === userId.toString() || 
-           this.provider.toString() === userId.toString();
-};
-
-// ✅ ADDED: Method to check if user is participant
-exchangeSchema.methods.isParticipant = function(userId) {
-    return this.learner.toString() === userId.toString() || 
-           this.provider.toString() === userId.toString();
-};
-
-// ✅ ENHANCED: Pre-save middleware (simplified)
-exchangeSchema.pre('save', function(next) {
-    // Set respondedAt when status changes from pending
-    if (this.isModified('status') && this.status !== 'pending' && !this.respondedAt) {
-        this.respondedAt = new Date();
-    }
-    
-    // Set cancelledAt when status changes to cancelled
-    if (this.isModified('status') && this.status === 'cancelled' && !this.cancelledAt) {
-        this.cancelledAt = new Date();
-    }
-    
-    next();
-});
 
 module.exports = mongoose.model('Exchange', exchangeSchema);
