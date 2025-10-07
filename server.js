@@ -2215,6 +2215,55 @@ fastify.post('/api/messages/send-to-exchange', { preHandler: authenticate }, asy
         reply.status(500).send({ error: 'Failed to send message' });
     }
 });
+// ✅ ADD MISSING EXCHANGE ENDPOINT WITH PROPER ERROR HANDLING
+fastify.get('/api/exchanges/user', { preHandler: authenticate }, async (request, reply) => {
+    try {
+        const userId = request.currentUser._id;
+        console.log(`🔄 Fetching exchanges for user: ${userId}`);
+        
+        // Validate user ID
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return reply.status(400).send({ error: 'Invalid user ID' });
+        }
+
+        const exchanges = await Exchange.find({
+            $or: [
+                { learner: userId },
+                { provider: userId }
+            ]
+        })
+        .populate('skill', 'name category timeRequired description')
+        .populate('learner', 'name email location profilePicture')
+        .populate('provider', 'name email location profilePicture')
+        .sort({ createdAt: -1 })
+        .lean(); // Use lean for better performance
+        
+        console.log(`✅ Found ${exchanges.length} exchanges for user ${userId}`);
+        
+        // Add type information for frontend
+        const exchangesWithType = exchanges.map(exchange => {
+            const exchangeObj = exchange;
+            exchangeObj.type = exchange.learner._id.toString() === userId.toString() ? 'sent' : 'received';
+            return exchangeObj;
+        });
+        
+        return { 
+            success: true,
+            exchanges: exchangesWithType 
+        };
+        
+    } catch (error) {
+        console.error('❌ Get user exchanges error:', error);
+        console.error('❌ Error stack:', error.stack);
+        
+        // Send more detailed error information for debugging
+        return reply.status(500).send({ 
+            error: 'Failed to get exchanges',
+            details: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
+    }
+});
 // ✅ GET USER'S PENDING EXCHANGES
 fastify.get('/api/exchanges/user/pending', { preHandler: authenticate }, async (request, reply) => {
     try {
