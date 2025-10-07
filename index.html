@@ -212,13 +212,6 @@
                     </a>
                 </li>
                                 <!-- Add these to your existing navbar list -->
-<li class="nav-item" id="nav-requests-item">
-    <a class="nav-link" href="#">
-        <i class="fas fa-exchange-alt me-1"></i>
-        Pending Requests
-        <span id="pending-requests-badge" class="badge bg-danger d-none">0</span>
-    </a>
-</li>
 <li class="nav-item d-none" id="nav-chats-item">
     <a class="nav-link nav-button-outline" href="#" id="nav-chats">
         <i class="fas fa-comments nav-icon"></i>Chats
@@ -1134,73 +1127,57 @@
     </div>
 </div>
 
-    <!-- Chat Sessions Section -->
-<div id="chat-sessions-section" class="d-none">
-    <div class="container mt-5 pt-4">
-        <div class="row">
-            <div class="col-12">
-                <h2 class="section-heading mb-3">Your Conversations</h2>
-                <p class="lead text-muted">Continue your conversations with skill providers and learners</p>
+<!-- Update your chat-sessions-section header -->
+<div id="chat-sessions-section" class="d-none container mt-4">
+    <div class="card">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="mb-0">
+                    <i class="fas fa-comments me-2"></i>
+                    Chat Session
+                </h5>
+                <small>
+                    With: <span id="chat-partner-name">User Name</span> | 
+                    Skill: <span id="chat-skill-name">Skill Name</span>
+                </small>
+            </div>
+            
+            <!-- ✅ PENDING REQUESTS DROPDOWN -->
+            <div class="dropdown">
+                <button class="btn btn-warning dropdown-toggle position-relative" 
+                        type="button" id="requests-dropdown-button" 
+                        data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-exchange-alt me-1"></i>
+                    Pending Requests
+                    <span id="requests-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">
+                        0
+                    </span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" id="requests-dropdown-menu" aria-labelledby="requests-dropdown-button">
+                    <li><a class="dropdown-item text-muted" href="#">Loading requests...</a></li>
+                </ul>
             </div>
         </div>
-
-        <div class="row">
-            <!-- Chat List Sidebar -->
-            <div class="col-lg-4 mb-4">
-                <div class="card chat-sidebar">
-                    <div class="card-header">
-                        <h5 class="mb-0">Active Conversations</h5>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="chat-list" id="chat-sessions-list">
-                            <!-- Chat sessions will be populated by JavaScript -->
-                            <div class="text-center py-5">
-                                <i class="fas fa-comments fa-2x text-muted mb-3"></i>
-                                <p class="text-muted">No active conversations</p>
-                                <small class="text-muted">Start a conversation by messaging a skill provider</small>
-                            </div>
-                        </div>
-                    </div>
+        
+        <div class="card-body">
+            <!-- Chat messages container -->
+            <div id="chat-messages" class="mb-3">
+                <!-- Messages will be loaded here -->
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-comment-dots fa-2x mb-2"></i>
+                    <p>Start a conversation</p>
                 </div>
             </div>
-
-            <!-- Chat Messages Area -->
-            <div class="col-lg-8 mb-4">
-                <div class="card chat-messages-container">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <div id="current-chat-header">
-                            <h5 class="mb-0">Select a conversation</h5>
-                        </div>
-                        <div id="chat-actions" class="d-none">
-                            <button class="btn btn-sm btn-outline-primary" id="start-video-call">
-                                <i class="fas fa-video me-1"></i>Video Call
-                            </button>
-                            <button class="btn btn-sm btn-outline-secondary" id="view-skill-details">
-                                <i class="fas fa-info-circle me-1"></i>Skill Details
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body p-0">
-                        <!-- Messages Container -->
-                        <div id="chat-messages-display" class="messages-container" style="height: 500px; overflow-y: auto;">
-                            <div class="text-center py-5">
-                                <i class="fas fa-comment-dots fa-3x text-muted mb-3"></i>
-                                <h5>Select a conversation</h5>
-                                <p class="text-muted">Choose a conversation from the list to start messaging</p>
-                            </div>
-                        </div>
-                        
-                        <!-- Message Input (hidden by default) -->
-                        <div id="chat-input-container" class="message-input-container p-3 border-top d-none">
-                            <div class="input-group">
-                                <input type="text" class="form-control" placeholder="Type your message..." id="chat-message-input">
-                                <button class="btn btn-primary" id="send-chat-message">
-                                    <i class="fas fa-paper-plane"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            
+            <!-- Message input -->
+            <div class="input-group">
+                <input type="text" class="form-control" id="chat-message-input" placeholder="Type your message...">
+                <button class="btn btn-primary" id="send-chat-message">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+                <button class="btn btn-success" id="start-video-call">
+                    <i class="fas fa-video me-1"></i>Video Call
+                </button>
             </div>
         </div>
     </div>
