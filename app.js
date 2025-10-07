@@ -5338,6 +5338,79 @@ let pendingRequests = {
     incoming: [],
     outgoing: []
 };
+// Load and display pending requests for dropdown
+async function loadPendingRequestsDropdown() {
+    try {
+        console.log('🔄 Loading pending requests for dropdown...');
+        
+        const response = await apiRequest('/api/exchanges/user', 'GET');
+        
+        if (response.success) {
+            const exchanges = response.exchanges;
+            
+            // Filter pending exchanges
+            const incomingRequests = exchanges.filter(ex => 
+                ex.type === 'received' && ex.status === 'pending'
+            );
+            
+            // Update dropdown badge and content
+            updateRequestsDropdown(incomingRequests);
+            
+        } else {
+            throw new Error('Failed to load exchanges');
+        }
+    } catch (error) {
+        console.error('❌ Error loading pending requests:', error);
+    }
+}
+
+// Update the requests dropdown in chat session
+function updateRequestsDropdown(requests) {
+    const dropdownButton = document.getElementById('requests-dropdown-button');
+    const dropdownMenu = document.getElementById('requests-dropdown-menu');
+    const badge = document.getElementById('requests-badge');
+    
+    if (!dropdownButton || !dropdownMenu) return;
+    
+    // Update badge count
+    if (badge) {
+        if (requests.length > 0) {
+            badge.textContent = requests.length;
+            badge.classList.remove('d-none');
+        } else {
+            badge.classList.add('d-none');
+        }
+    }
+    
+    // Update dropdown content
+    if (requests.length === 0) {
+        dropdownMenu.innerHTML = `
+            <li><a class="dropdown-item text-muted" href="#">No pending requests</a></li>
+        `;
+    } else {
+        dropdownMenu.innerHTML = requests.map(request => `
+            <li>
+                <div class="dropdown-item request-dropdown-item">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <small class="fw-bold">${request.skillName || 'Skill'}</small>
+                            <br>
+                            <small class="text-muted">From: ${request.learnerName || 'User'}</small>
+                        </div>
+                        <div class="dropdown-actions ms-2">
+                            <button class="btn btn-success btn-xs me-1" onclick="handleAcceptRequest('${request._id}')">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button class="btn btn-danger btn-xs" onclick="handleRejectRequest('${request._id}')">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </li>
+        `).join('');
+    }
+}
 
 // ✅ LOAD PENDING REQUESTS
 async function loadPendingRequests() {
