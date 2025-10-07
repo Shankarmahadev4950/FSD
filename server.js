@@ -2293,6 +2293,70 @@ fastify.get('/api/exchanges/user/pending', { preHandler: authenticate }, async (
     }
 });
 
+// ✅ ADD DEBUG ENDPOINT FOR EXCHANGE ISSUES
+fastify.get('/api/debug/exchanges', { preHandler: authenticate }, async (request, reply) => {
+    try {
+        const userId = request.currentUser._id;
+        
+        // Count exchanges by status
+        const exchangeCounts = await Exchange.aggregate([
+            {
+                $match: {
+                    $or: [
+                        { learner: mongoose.Types.ObjectId(userId) },
+                        { provider: mongoose.Types.ObjectId(userId) }
+                    ]
+                }
+            },
+            {
+                $group: {
+                    _id: '$status',
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+        
+        // Get sample exchanges with detailed info
+        const sampleExchanges = await Exchange.find({
+            $or: [
+                { learner: userId },
+                { provider: userId }
+            ]
+        })
+        .populate('skill', 'name category')
+        .populate('learner', 'name email')
+        .populate('provider', 'name email')
+        .limit(5)
+        .sort({ createdAt: -1 });
+        
+        return {
+            userId: userId.toString(),
+            exchangeCounts,
+            sampleExchanges: sampleExchanges.map(ex => ({
+                id: ex._id,
+                status: ex.status,
+                skill: ex.skill ? { name: ex.skill.name, category: ex.skill.category } : 'Missing',
+                learner: ex.learner ? { name: ex.learner.name, email: ex.learner.email } : 'Missing',
+                provider: ex.provider ? { name: ex.provider.name, email: ex.provider.email } : 'Missing',
+                learnerName: ex.learnerName,
+                providerName: ex.providerName,
+                skillName: ex.skillName
+            })),
+            totalExchanges: await Exchange.countDocuments({
+                $or: [
+                    { learner: userId },
+                    { provider: userId }
+                ]
+            })
+        };
+    } catch (error) {
+        console.error('Debug exchanges error:', error);
+        return reply.status(500).send({ 
+            error: 'Debug failed', 
+            message: error.message 
+        });
+    }
+});
 // ✅ GET RECENT CHATS
 fastify.get('/api/messages/recent', { preHandler: authenticate }, async (request, reply) => {
     try {
